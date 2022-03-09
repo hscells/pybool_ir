@@ -1,0 +1,9 @@
+.pytest_cache
+build
+hyperbool.egg-info
+pylucene
+scratch
+test_data
+
+__pycache__
+*.pyc

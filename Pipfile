@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+hyperbool = {path = ".", editable = true}
+lucene = {path = "./pylucene/dist/lucene-8.11.0-cp39-cp39-macosx_10_14_x86_64.whl", editable = false}
+pyparsing = "*"
+pytest = "*"
+dataclasses-json = "*"
+lupyne = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
