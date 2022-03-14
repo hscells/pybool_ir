@@ -1,8 +1,8 @@
-from hyperbool.dsl import parser
+from hyperbool.query.parser import Parser
 
 
 def test_basic():
-    result = parser.runTests('''
+    result = Parser.runTests('''
     # Single expression.
     (atom1 AND atom2)
     # Nested expression.

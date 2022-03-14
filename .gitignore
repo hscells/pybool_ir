@@ -4,6 +4,10 @@ hyperbool.egg-info
 pylucene
 scratch
 test_data
+.eggs
+dist
+baseline
+index
 
 __pycache__
 *.pyc
