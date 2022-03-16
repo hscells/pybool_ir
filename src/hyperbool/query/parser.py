@@ -5,6 +5,9 @@ from calendar import monthrange
 from hyperbool.query import fields
 
 import lucene
+# noinspection PyUnresolvedReferences
+from org.apache.lucene import search
+
 from lupyne import engine
 from pyparsing import (
     Word,
@@ -34,8 +37,12 @@ class OpNode:
 
 class UnOp(OpNode):
     def __init__(self, tokens):
-        self.operator = tokens[0][0]
-        self.operands = [tokens[0][1]]
+        self.operator = tokens[0][1]
+        self.operands = tokens[0][::2]
+
+    def __query__(self):
+        # return Q.boolean(search.BooleanClause.Occur.MUST_NOT, self.operands.__query__())
+        return Q.boolean(search.BooleanClause.Occur.SHOULD, *[self.operands[0].__query__(), Q.boolean(search.BooleanClause.Occur.MUST_NOT, self.operands[1].__query__())])
 
 
 class BinOp(OpNode):
@@ -135,7 +142,7 @@ class Term():
 
 class Phrase():
     def __init__(self, tokens):
-        self.query = tokens[0].split()
+        self.query = analyzer.parse(tokens[0]).__str__().split()
 
     def __repr__(self):
         return f"Phrase({self.query})"
@@ -195,7 +202,7 @@ AND, OR, NOT = map(
 
 # Atoms.
 term = (Word(alphanums + "-_") + Optional(Literal("*"))).set_parse_action(Term)
-phrase = (Suppress('"') + Word(alphanums + " -_,") + Suppress('"')).set_parse_action(Phrase)
+phrase = (Suppress('"') + Word(alphanums + " -_,/'") + Suppress('"')).set_parse_action(Phrase)
 date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(Date)
 date_range = (date + Suppress(":") + date).set_parse_action(DateRange)
 
@@ -206,7 +213,7 @@ field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Suppress("]")).s
 atom = Group(((date_range | date | term | phrase) + Optional(field_restriction))).set_parse_action(Atom)
 
 # Final expression.
-expression = infix_notation(atom, [(NOT, 1, OpAssoc.RIGHT, UnOp), (AND, 2, OpAssoc.LEFT, BinOp), (OR, 2, OpAssoc.LEFT, BinOp)])
+expression << infix_notation(atom, [(NOT, 2, OpAssoc.LEFT, UnOp), (AND, 2, OpAssoc.LEFT, BinOp), (OR, 2, OpAssoc.LEFT, BinOp)])
 
 
 def parse_query(query: str) -> Q:
