@@ -18,6 +18,7 @@ progressbar2 = "*"
 wget = "*"
 requests = "*"
 tqdm = "*"
+lxml = "*"
 
 [dev-packages]
 
