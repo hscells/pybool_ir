@@ -19,6 +19,9 @@ wget = "*"
 requests = "*"
 tqdm = "*"
 lxml = "*"
+transformers = "*"
+sentence-transformers = "*"
+nltk = "*"
 
 [dev-packages]
 

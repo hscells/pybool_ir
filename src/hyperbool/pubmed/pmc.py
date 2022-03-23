@@ -1,15 +1,14 @@
 import os
-import sys
 from ftplib import FTP
 from pathlib import Path
 
 from hyperbool.pubmed import datautils
-from hyperbool.pubmed.datautils import FTP_URL, FTP_BASELINE_CWD
+from hyperbool.pubmed.datautils import FTP_URL, FTP_PMC_CWD
 
 
 def download_baseline(path: Path):
     with FTP(host=FTP_URL, user="anonymous") as ftp:
-        ftp.cwd(FTP_BASELINE_CWD)
+        ftp.cwd(FTP_PMC_CWD)
         files = []
         ftp.dir(files.append)
 
@@ -19,10 +18,7 @@ def download_baseline(path: Path):
         if os.path.exists(str(path / filename)):
             print(f"found {path / filename}, skipping")
             continue
-        datautils.download_file("https://" + FTP_URL + FTP_BASELINE_CWD + filename, path / filename)
+        # TODO: implement downloading PMC files.
+        # datautils.download_single(path, filename)
 
     ftp.close()
-
-
-if __name__ == '__main__':
-    download_baseline(Path("./data/baseline"))

@@ -105,10 +105,8 @@ def add_document(indexer: engine.IndexWriter, doc: PubmedArticle) -> None:
     indexer.add(doc.to_dict())
 
 
-def bulk_index(indexer: engine.IndexWriter, docs: List[PubmedArticle], n_docs: int = 500) -> None:
+def bulk_index(indexer: engine.IndexWriter, docs: List[PubmedArticle]) -> None:
     for i, doc in tqdm(enumerate(docs)):
         add_document(indexer, doc)
-        if i % n_docs == 0:
-            indexer.commit()
     indexer.commit()
 # %%

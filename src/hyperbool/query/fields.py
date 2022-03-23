@@ -4,6 +4,7 @@
 mapping = {
     # TODO: At the moment, the fields must be arrays, since
     #       the title and the abstract are separate fields.
+    "All Fields": ["title", "abstract", "keyword_list", "mesh_heading_list", "publication_type"],
     "Title/Abstract": ["title", "abstract"],
     "tiab": ["title", "abstract"],
     "Title": ["title"],
@@ -14,6 +15,7 @@ mapping = {
     # TODO: In reality, there are many kinds of MeSH headings
     #       so in the future, we may wish to expand these fields.
     "MeSH": ["mesh_heading_list"],
+    "MeSH Terms": ["mesh_heading_list"],
     "Mesh": ["mesh_heading_list"],
     "sh": ["mesh_heading_list"],
 

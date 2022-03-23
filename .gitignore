@@ -7,7 +7,8 @@ test_data
 .eggs
 dist
 baseline
-index
+index*
+data
 
 __pycache__
 *.pyc
