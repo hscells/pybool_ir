@@ -2,12 +2,16 @@ import os
 from pathlib import Path
 from typing import List, Dict
 
-import requests
+import lucene
+from lupyne import engine
 
 from hyperbool.pubmed import datautils
 from hyperbool.pubmed.datautils import MESH_YEAR, MESH_URL
 
 DEFAULT_PATH = Path("./data/mesh")
+
+assert lucene.getVMEnv() or lucene.initVM()
+analyzer = engine.analyzers.Analyzer.standard()
 
 
 class MeSHTree:
@@ -16,14 +20,25 @@ class MeSHTree:
         self.headings: Dict[str, str] = {}
         with open(mtrees_file / f"mtrees{year}.bin", "r") as f:
             for line in f:
-                heading, location = line.strip().split(";")
-                self.locations[heading] = location.strip().replace("\n","")
-                self.headings[location] = heading.strip().replace("\n","")
+                heading, location = line.replace("\n", "").strip().split(";")
+                # TODO: Need to index mesh headings in the same way.
+                analyzed_heading = analyzer.parse(heading.
+                                                  lower().
+                                                  strip().
+                                                  replace("-", " ").
+                                                  replace("+", " ").
+                                                  replace(")", " ").
+                                                  replace("(", " ")).__str__()
+                self.locations[analyzed_heading] = location.strip()
+                self.headings[location] = analyzed_heading
 
     def explode(self, heading: str) -> List[str]:
-        location = self.locations[heading]
+        if heading.lower() not in self.locations:
+            return []
+        location = self.locations[heading.lower()]
         for k, v in self.headings.items():
-            if k.startswith(location):
+            # All child terms, but not including the original term.
+            if k.startswith(location) and location != k:
                 yield v
 
 

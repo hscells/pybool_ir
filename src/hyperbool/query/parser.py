@@ -2,6 +2,8 @@ from typing import List
 
 import datetime
 from calendar import monthrange
+
+from hyperbool.pubmed.mesh import MeSHTree
 from hyperbool.query import fields
 
 import lucene
@@ -40,9 +42,10 @@ class UnOp(OpNode):
         self.operator = tokens[0][1]
         self.operands = tokens[0][::2]
 
-    def __query__(self):
-        # return Q.boolean(search.BooleanClause.Occur.MUST_NOT, self.operands.__query__())
-        return Q.boolean(search.BooleanClause.Occur.SHOULD, *[self.operands[0].__query__(), Q.boolean(search.BooleanClause.Occur.MUST_NOT, self.operands[1].__query__())])
+    def __query__(self, tree: MeSHTree):
+        return Q.boolean(search.BooleanClause.Occur.SHOULD,
+                         *[self.operands[0].__query__(tree), Q.boolean(search.BooleanClause.Occur.MUST_NOT,
+                                                                       self.operands[1].__query__(tree))])
 
 
 class BinOp(OpNode):
@@ -50,17 +53,17 @@ class BinOp(OpNode):
         self.operator = tokens[0][1]
         self.operands = tokens[0][::2]
 
-    def __query__(self):
+    def __query__(self, tree: MeSHTree):
         if self.operator == "AND":
             op = Q.all
         else:
             op = Q.any
-        return op(*[operand.__query__() for operand in self.operands])
+        return op(*[operand.__query__(tree) for operand in self.operands])
 
 
 # The following classes are used to create Lucene queries once parsed.
 
-class Atom():
+class Atom:
     def __init__(self, tokens):
         self.query = tokens[0][0]
         self.field = tokens[0][1] if len(tokens[0]) > 1 else default_field
@@ -68,21 +71,27 @@ class Atom():
     def __repr__(self):
         return f"{self.query}[{self.field}]"
 
-    def __query__(self):
+    def __query__(self, tree: MeSHTree):
         mapped_fields = self.field.__query__()
+
+        # TODO: would be great to have the ability to add in
+        #       custom expansion methods at this point.
+        expansion_atoms = []
+        if self.field.field_op is None:
+            if "mesh_heading_list" in mapped_fields:
+                for heading in tree.explode(self.query.query):
+                    expansion_atoms.append(Q.phrase("mesh_heading_list", heading))
         # Terms.
         if isinstance(self.query, Term):
-            query = self.query.__query__()
             if len(mapped_fields) == 1:
-                return query(mapped_fields[0], self.query.query)
-            return Q.any(*[query(f, self.query.query) for f in mapped_fields])
+                return Q.any(*[Q.term(mapped_fields[0], self.query.query)] + expansion_atoms)
+            return Q.any(*[Q.term(f, self.query.query) for f in mapped_fields] + expansion_atoms)
 
         # Phrases.
         elif isinstance(self.query, Phrase):
-            query = self.query.__query__()
             if len(mapped_fields) == 1:
-                return query(mapped_fields[0], *self.query.query)
-            return Q.any(*[query(f, *self.query.query) for f in mapped_fields])
+                return Q.any(*[Q.phrase(mapped_fields[0], *self.query.query.split())] + expansion_atoms)
+            return Q.any(*[Q.phrase(f, *self.query.query.split()) for f in mapped_fields] + expansion_atoms)
 
         # Dates.
         elif isinstance(self.query, Date):
@@ -127,7 +136,7 @@ class Atom():
             return field.range(date_from, date_to)
 
 
-class Term():
+class Term:
     def __init__(self, tokens):
         self.query = analyzer.parse(tokens[0]).__str__()
         self.fuzzy = tokens[1] if len(tokens) > 1 else ""
@@ -136,19 +145,13 @@ class Term():
     def __repr__(self):
         return f"Term({self.query})"
 
-    def __query__(self):
-        return Q.term
 
-
-class Phrase():
+class Phrase:
     def __init__(self, tokens):
-        self.query = analyzer.parse(tokens[0]).__str__().split()
+        self.query = analyzer.parse(tokens[0]).__str__()
 
     def __repr__(self):
         return f"Phrase({self.query})"
-
-    def __query__(self):
-        return Q.phrase
 
 
 class Date():
@@ -179,6 +182,9 @@ class DateRange():
 class Field():
     def __init__(self, tokens):
         self.field = tokens[0]
+        self.field_op = None
+        if len(tokens) > 1:
+            self.field_op = tokens[1]
 
     def __repr__(self):
         return f"Fields({self.field})"
@@ -207,7 +213,7 @@ date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Opt
 date_range = (date + Suppress(":") + date).set_parse_action(DateRange)
 
 # Fields.
-field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Suppress("]")).set_parse_action(Field)
+field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(Field)
 
 # Atom + Fields.
 atom = Group(((date_range | date | term | phrase) + Optional(field_restriction))).set_parse_action(Atom)
@@ -216,6 +222,6 @@ atom = Group(((date_range | date | term | phrase) + Optional(field_restriction))
 expression << infix_notation(atom, [(NOT, 2, OpAssoc.LEFT, UnOp), (AND, 2, OpAssoc.LEFT, BinOp), (OR, 2, OpAssoc.LEFT, BinOp)])
 
 
-def parse_query(query: str) -> Q:
+def parse_query(query: str, tree: MeSHTree) -> Q:
     # NOTE: converting the query to a string makes the date range queries fail. (?)
-    return expression.parse_string(query, parse_all=True)[0].__query__()  # .__str__()
+    return expression.parse_string(query, parse_all=True)[0].__query__(tree=tree)  # .__str__()
