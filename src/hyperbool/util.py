@@ -1,8 +1,10 @@
 import os
 from io import BufferedRWPair, FileIO, BytesIO
+from pathlib import Path
 from typing import Union
 
 import progressbar
+import requests
 
 
 class ProgressFile(BufferedRWPair):
@@ -65,3 +67,11 @@ class ProgressFile(BufferedRWPair):
             read_size = 0
             position = self.max_value
         self.bar.update(position + read_size)
+
+
+def download_file(url: str, download_to: Path):
+    r = requests.get(url, stream=True)
+    size = int(r.headers.get("content-length"))
+    with ProgressFile(download_to, "wb", max_value=size) as f:
+        for chunk in r.iter_content(chunk_size=128):
+            f.write(chunk)

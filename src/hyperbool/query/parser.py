@@ -3,6 +3,7 @@ from typing import List
 import datetime
 from calendar import monthrange
 
+from hyperbool.pubmed import mesh
 from hyperbool.pubmed.mesh import MeSHTree
 from hyperbool.query import fields
 
@@ -17,7 +18,7 @@ from pyparsing import (
     alphanums,
     Forward,
     CaselessKeyword,
-    ParserElement, Suppress, infix_notation, OpAssoc, Group, WordEnd, Literal, Combine, OneOrMore, FollowedBy, nums)
+    ParserElement, Suppress, infix_notation, OpAssoc, Group, WordEnd, Literal, Combine, OneOrMore, FollowedBy, nums, ZeroOrMore, White, printables)
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
@@ -209,6 +210,7 @@ AND, OR, NOT = map(
 # Atoms.
 term = (Word(alphanums + "-_") + Optional(Literal("*"))).set_parse_action(Term)
 phrase = (Suppress('"') + Word(alphanums + " -_,/'") + Suppress('"')).set_parse_action(Phrase)
+quoteless_phrase = Combine(OneOrMore(Word(alphanums + "-_,/'") | White(" ", max=1) + ~(White() | AND | OR | NOT))).set_parse_action(Phrase)
 date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(Date)
 date_range = (date + Suppress(":") + date).set_parse_action(DateRange)
 
@@ -216,7 +218,8 @@ date_range = (date + Suppress(":") + date).set_parse_action(DateRange)
 field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(Field)
 
 # Atom + Fields.
-atom = Group(((date_range | date | term | phrase) + Optional(field_restriction))).set_parse_action(Atom)
+atom = Group(((date_range | date | quoteless_phrase | term | phrase ) + Optional(field_restriction))).set_parse_action(Atom)
+# atom = Group(((quoteless_phrase) + Optional(field_restriction))).set_parse_action(Atom)
 
 # Final expression.
 expression << infix_notation(atom, [(NOT, 2, OpAssoc.LEFT, UnOp), (AND, 2, OpAssoc.LEFT, BinOp), (OR, 2, OpAssoc.LEFT, BinOp)])
@@ -225,3 +228,11 @@ expression << infix_notation(atom, [(NOT, 2, OpAssoc.LEFT, UnOp), (AND, 2, OpAss
 def parse_query(query: str, tree: MeSHTree) -> Q:
     # NOTE: converting the query to a string makes the date range queries fail. (?)
     return expression.parse_string(query, parse_all=True)[0].__query__(tree=tree)  # .__str__()
+
+
+class PubmedQueryParser:
+    def __init__(self, tree: MeSHTree = MeSHTree()):
+        self.tree = tree
+
+    def parse(self, raw_query: str) -> Q:
+        return parse_query(raw_query, self.tree)

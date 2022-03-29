@@ -22,6 +22,9 @@ lxml = "*"
 transformers = "*"
 sentence-transformers = "*"
 nltk = "*"
+trectools = "*"
+ir-measures = "*"
+appdirs = "*"
 
 [dev-packages]
 

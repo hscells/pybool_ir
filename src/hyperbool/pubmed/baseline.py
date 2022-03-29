@@ -3,6 +3,7 @@ import sys
 from ftplib import FTP
 from pathlib import Path
 
+from hyperbool import util
 from hyperbool.pubmed import datautils
 from hyperbool.pubmed.datautils import FTP_URL, FTP_BASELINE_CWD
 
@@ -19,7 +20,7 @@ def download_baseline(path: Path):
         if os.path.exists(str(path / filename)):
             print(f"found {path / filename}, skipping")
             continue
-        datautils.download_file("https://" + FTP_URL + FTP_BASELINE_CWD + filename, path / filename)
+        util.download_file("https://" + FTP_URL + FTP_BASELINE_CWD + filename, path / filename)
 
     ftp.close()
 
