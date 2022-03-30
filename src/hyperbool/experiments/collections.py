@@ -45,7 +45,8 @@ class Collection:
         qrels_path = collection_path / "qrels"
 
         assert qrels_path.is_file()
-        qrels = ir_measures.read_trec_qrels(qrels_path)
+        with open(qrels_path, "r") as f:
+            qrels = list(ir_measures.read_trec_qrels(f))
         topics = list(Topic.from_file(topics_path))
 
         return Collection(collection_path.name, topics, qrels)
@@ -76,21 +77,34 @@ def __load_sysrev_seed(name: str) -> Collection:
         if os.path.exists(qrels_file):
             os.remove(qrels_file)
 
-        with open(raw_collection, "r") as f:
-            for line in f:
+        with open(raw_collection, "r") as cf:
+            for line in cf:
                 t = json.loads(line)
 
                 with open(topic_file, "a") as f:
+                    if t["id"] == "1":
+                        t["query"] = t["query"].replace("/adverse effects", "")
+                    if t["id"] == "32":
+                        t["query"] = t["query"].replace("Ï", "I")
+                    if t["id"] == "42":
+                        t["query"] = t["query"].replace("/methods", "").replace("/standards", "")
+                    if t["id"] == "51":
+                        t["query"] = t["query"][:-2].replace("*Staphylococcus", "Staphylococcus")
+
                     f.write(Topic(identifier=t["id"],
-                                  description=t["title"],
-                                  raw_query=t["query"],
+                                  description=t["search_name"],
+                                  raw_query=t["query"].replace("“", '"')
+                                  .replace("”", '"')
+                                  .replace("Atonic[tiab] Impaired[tiab]", 'Atonic[tiab] OR Impaired[tiab]')  # Covers topic 39.
+                                  .replace("]/))", ']))')  # Covers topic 60.
+                                  .replace("OR OR", 'OR'),  # Covers topic 51.
                                   date_from=datetime.strptime(t["Date_from"], "%d/%m/%Y").strftime("%Y/%m/%d"),
                                   date_to=datetime.strptime(t["Date_to"], "%d/%m/%Y").strftime("%Y/%m/%d")
                                   ).to_json() + "\n")
 
                 with open(qrels_file, "a") as f:
                     for pmid in t["included_studies"]:
-                        f.write(f'{t["id"]} 0 {pmid} 1')
+                        f.write(f'{t["id"]} 0 {pmid} 1\n')
 
     return Collection.from_dir(download_dir)
 

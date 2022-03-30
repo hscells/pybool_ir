@@ -18,6 +18,11 @@ mapping = {
     "MeSH Terms": ["mesh_heading_list"],
     "Mesh": ["mesh_heading_list"],
     "sh": ["mesh_heading_list"],
+    "Subheading": ["mesh_heading_list"],
+    "Pharmacological Action": ["mesh_heading_list"],  # TODO: This is unlikely correct.
+    "Supplementary Concept": ["mesh_heading_list"],  # TODO: This is unlikely correct.
+    "nm": ["mesh_heading_list"],  # TODO: This is unlikely correct.
+    "MAJR": ["mesh_heading_list"],  # TODO: This is unlikely correct.
 
     "Publication Type": ["publication_type"],
     "pt": ["publication_type"],
@@ -32,4 +37,8 @@ mapping = {
 
     "PMID": ["pmid"],
     "pmid": ["pmid"],
+
+    # TODO: No mapping yet. Empty list means the
+    #       term is not included in the query.
+    "jour": [],
 }

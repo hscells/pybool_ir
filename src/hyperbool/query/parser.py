@@ -18,10 +18,11 @@ from pyparsing import (
     alphanums,
     Forward,
     CaselessKeyword,
-    ParserElement, Suppress, infix_notation, OpAssoc, Group, WordEnd, Literal, Combine, OneOrMore, FollowedBy, nums, ZeroOrMore, White, printables)
+    ParserElement, Suppress, infix_notation, OpAssoc, Group, WordEnd, Literal, Combine, OneOrMore, FollowedBy, nums, ZeroOrMore, White, printables, OnlyOnce, PrecededBy)
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
+search.BooleanQuery.setMaxClauseCount(4096)  # There is apparently a cap for efficiency reasons.
 analyzer = engine.analyzers.Analyzer.standard()
 indexer = engine.Indexer(directory=None)
 
@@ -83,13 +84,25 @@ class Atom:
                 for heading in tree.explode(self.query.query):
                     expansion_atoms.append(Q.phrase("mesh_heading_list", heading))
         # Terms.
-        if isinstance(self.query, Term):
-            if len(mapped_fields) == 1:
-                return Q.any(*[Q.term(mapped_fields[0], self.query.query)] + expansion_atoms)
-            return Q.any(*[Q.term(f, self.query.query) for f in mapped_fields] + expansion_atoms)
+        # if isinstance(self.query, Term):
+        #     if len(mapped_fields) == 1:
+        #         return Q.any(*[Q.term(mapped_fields[0], self.query.query)] + expansion_atoms)
+        #     return Q.any(*[Q.term(f, self.query.query) for f in mapped_fields] + expansion_atoms)
 
         # Phrases.
-        elif isinstance(self.query, Phrase):
+        if isinstance(self.query, Phrase):
+            # print(self.query.fuzzy, self.query.quoted)
+            # if self.query.fuzzy:
+            #     q = f"{self.query.query}"
+            #     if len(mapped_fields) == 1:
+            #         return Q.any(*[Q.wildcard(mapped_fields[0], q)] + expansion_atoms)
+            #     return Q.any(*[Q.wildcard(f, q) for f in mapped_fields] + expansion_atoms)
+
+            if not self.query.quoted:
+                if len(mapped_fields) == 1:
+                    return Q.any(*[Q.all(*[Q.term(mapped_fields[0], q) for q in self.query.query.split()])] + expansion_atoms)
+                return Q.any(*[Q.all(*[Q.term(f, q) for q in self.query.query.split()]) for f in mapped_fields] + expansion_atoms)
+
             if len(mapped_fields) == 1:
                 return Q.any(*[Q.phrase(mapped_fields[0], *self.query.query.split())] + expansion_atoms)
             return Q.any(*[Q.phrase(f, *self.query.query.split()) for f in mapped_fields] + expansion_atoms)
@@ -137,19 +150,22 @@ class Atom:
             return field.range(date_from, date_to)
 
 
-class Term:
-    def __init__(self, tokens):
-        self.query = analyzer.parse(tokens[0]).__str__()
-        self.fuzzy = tokens[1] if len(tokens) > 1 else ""
-        self.query += self.fuzzy
-
-    def __repr__(self):
-        return f"Term({self.query})"
-
+# class Term:
+#     def __init__(self, tokens):
+#         self.query = analyzer.parse("".join(tokens)).__str__()
+#         self.fuzzy = True if len(tokens) > 1 and tokens[1] == "*" else False
+#
+#     def __repr__(self):
+#         return f"Term({self.query})"
 
 class Phrase:
     def __init__(self, tokens):
         self.query = analyzer.parse(tokens[0]).__str__()
+        self.quoted = True if self.query.startswith('"') and self.query.endswith('"') else False
+        self.fuzzy = True if "*" in tokens[0] else False
+
+        if self.quoted:
+            self.query = self.query[1:-1]
 
     def __repr__(self):
         return f"Phrase({self.query})"
@@ -181,7 +197,7 @@ class DateRange():
 
 
 class Field():
-    def __init__(self, tokens):
+    def __init__(self, tokens, **kwargs):
         self.field = tokens[0]
         self.field_op = None
         if len(tokens) > 1:
@@ -208,9 +224,11 @@ AND, OR, NOT = map(
 )
 
 # Atoms.
-term = (Word(alphanums + "-_") + Optional(Literal("*"))).set_parse_action(Term)
-phrase = (Suppress('"') + Word(alphanums + " -_,/'") + Suppress('"')).set_parse_action(Phrase)
-quoteless_phrase = Combine(OneOrMore(Word(alphanums + "-_,/'") | White(" ", max=1) + ~(White() | AND | OR | NOT))).set_parse_action(Phrase)
+# term = (Suppress(Optional(Literal("*"))) + Word(alphanums + "α-–_") + Optional(Literal("*"))).set_parse_action(Term)
+valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + " α-–_,/'’") ^ Literal("*")))
+valid_quoteless_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + "α-–_,/'’") ^ Literal("*")))
+phrase = Combine(Literal('"') + valid_phrase + Literal('"')).set_parse_action(Phrase)
+quoteless_phrase = (Combine(OneOrMore(valid_quoteless_phrase | White(" ", max=1) + ~(White() | AND | OR | NOT)))).set_parse_action(Phrase)
 date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(Date)
 date_range = (date + Suppress(":") + date).set_parse_action(DateRange)
 
@@ -218,7 +236,7 @@ date_range = (date + Suppress(":") + date).set_parse_action(DateRange)
 field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(Field)
 
 # Atom + Fields.
-atom = Group(((date_range | date | quoteless_phrase | term | phrase ) + Optional(field_restriction))).set_parse_action(Atom)
+atom = Group(((date_range | date | quoteless_phrase | phrase) + Optional(field_restriction))).set_parse_action(Atom)
 # atom = Group(((quoteless_phrase) + Optional(field_restriction))).set_parse_action(Atom)
 
 # Final expression.
@@ -226,6 +244,10 @@ expression << infix_notation(atom, [(NOT, 2, OpAssoc.LEFT, UnOp), (AND, 2, OpAss
 
 
 def parse_query(query: str, tree: MeSHTree) -> Q:
+    try:
+        expression.scan_string(query, debug=True)
+    except Exception as e:
+        return e
     # NOTE: converting the query to a string makes the date range queries fail. (?)
     return expression.parse_string(query, parse_all=True)[0].__query__(tree=tree)  # .__str__()
 

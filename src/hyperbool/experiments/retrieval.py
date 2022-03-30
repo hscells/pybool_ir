@@ -1,4 +1,5 @@
 import hashlib
+import json
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -11,37 +12,55 @@ from lupyne import engine
 import hyperbool
 import hyperbool.pubmed.index as ix
 from hyperbool.experiments.collections import Collection
-from hyperbool.query.parser import PubmedQueryParser
+from hyperbool.query.parser import PubmedQueryParser, Q
 
 
 class RetrievalExperiment:
     def __init__(self, index_path: Path, collection: Collection,
                  query_parser: PubmedQueryParser = PubmedQueryParser(),
-                 eval_measures: List[Measure] = None, run_path: Path = None):
+                 eval_measures: List[Measure] = None, run_path: Path = None,
+                 filter_topics: List[str] = None):
+
+        # Some arguments have default values that need updating.
         if eval_measures is None:
             eval_measures = [Precision, Recall, SetF]
+        if isinstance(index_path, str):
+            index_path = Path(index_path)
+        if filter_topics is not None:
+            filtered_topics = list(filter(lambda x: x.identifier in filter_topics, collection.topics))
+            filtered_qrels = list(filter(lambda x: x.query_id in filter_topics, collection.qrels))
+            collection = Collection(collection.identifier, filtered_topics, filtered_qrels)
 
+        # Timings for reproducibility and sanity checks.
         self.date_created = datetime.now()
         self.date_completed = None
 
+        # Some internal variables.
+        # The run is cached from the retrieval, so that the retrieval is only executed once.
         self._run = None
-        self._evaluation = None
+        # The identifier can uniquely refer to an experiment.
         self._identifier = str(uuid.uuid4())
 
+        # Variables required to run experiments.
         self.run_path = run_path
         self.index_path = index_path
         self.index: engine.Indexer = None
         self.collection = collection
         self.eval_measures = eval_measures
-        self.queries = dict([(topic.identifier, query_parser.parse(topic.raw_query)) for topic in collection.topics])
 
+        # Right at the last step, we can apply the date restrictions.
+        self.queries = dict([(topic.identifier, Q.all(*[query_parser.parse(topic.raw_query)] + [query_parser.parse(f"{topic.date_from}:{topic.date_to}[dp]")])) for topic in collection.topics])
+
+    # This private method runs the retrieval.
     def __retrieval(self) -> List[ScoredDoc]:
         for query_id, lucene_query in self.queries.items():
+            # Documents can remain un-scored for efficiency (?).
             hits = self.index.search(lucene_query, scored=False)
             for hit in hits:
                 yield ScoredDoc(query_id, hit["pmid"], 0)
         self.date_completed = datetime.now()
 
+    # The following two methods provide the `with [..] as [..]` syntax.
     def __enter__(self):
         self.index = ix.load_index(self.index_path)
         return self
@@ -49,6 +68,7 @@ class RetrievalExperiment:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.index.close()
 
+    # This is what one would actually call to get the runs.
     @property
     def run(self) -> List[ScoredDoc]:
         # If the experiment has already been executed, just return the results.
@@ -71,12 +91,14 @@ class RetrievalExperiment:
                 rank = ranks.setdefault(key, 0)
 
                 # Write the results and append to our temporary list.
-                f.write(f"{scored_doc.query_id} Q0 {scored_doc.doc_id} {rank} {scored_doc.score} {self._identifier[:7]}\n")
+                f.write(f"{scored_doc.query_id} Q0 {scored_doc.doc_id} {rank} {1 + scored_doc.score} {self._identifier[:7]}\n")
                 scored_docs.append(scored_doc)
 
         self._run = scored_doc
         return self._run
 
+    # Helper methods for evaluating the run.
+    # Note that the evaluation methods are part of the "experiment".
     def results(self, aggregate: bool = True):
         if aggregate:
             return ir_measures.calc_aggregate(self.eval_measures, self.collection.qrels, self.run)
@@ -84,20 +106,20 @@ class RetrievalExperiment:
 
     def __hash__(self):
         return hash(hyperbool.__version__ +
-                    self.index_path.absolute() +
+                    str(self.index_path.absolute()) +
                     str(hash(self.collection)) +
                     str("".join(str(e) for e in self.eval_measures)))
 
     def __repr__(self):
-        return {
+        d = {
             "hyperbool.version": hyperbool.__version__,
             "experiment.identifier": self._identifier,
-            "experiment.hash": hashlib.sha256(hash(self)),
-            "experiment.creation": self.date_created,
-            "experiment.completed": self.date_completed,
+            "experiment.hash": hashlib.sha256(bytes(str(hash(self)), encoding="utf-8")).hexdigest(),
+            "experiment.creation": str(self.date_created),
+            "experiment.completed": str(self.date_completed),
             "experiment.collection.identifier": self.collection.identifier,
             "experiment.collection.topics": len(self.collection.topics),
-            "experiment.collection.hash": hashlib.sha256(hash(self.collection)),
-            "index.path": self.index_path.absolute(),
-            "index.count": self.index.indexSearcher.count(),
+            "experiment.collection.hash": hashlib.sha256(bytes(str(hash(self.collection)), encoding="utf-8")).hexdigest(),
+            "index.path": str(self.index_path.absolute()),
         }
+        return json.dumps(d)
