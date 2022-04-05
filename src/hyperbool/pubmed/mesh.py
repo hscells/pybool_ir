@@ -15,6 +15,16 @@ assert lucene.getVMEnv() or lucene.initVM()
 analyzer = engine.analyzers.Analyzer.standard()
 
 
+def analyze_mesh(heading: str) -> str:
+    return analyzer.parse(heading.
+                          lower().
+                          strip().
+                          replace("-", " ").
+                          replace("+", " ").
+                          replace(")", " ").
+                          replace("(", " ")).__str__()
+
+
 class MeSHTree:
     def __init__(self, mtrees_file: Path = DEFAULT_PATH, year: str = MESH_YEAR):
         self.locations = {}
@@ -25,13 +35,7 @@ class MeSHTree:
             for i, line in enumerate(f):  # Assumes all headings are sorted in order of location.
                 heading, location = line.replace("\n", "").strip().split(";")
                 # TODO: Need to index mesh headings in the same way.
-                analyzed_heading = analyzer.parse(heading.
-                                                  lower().
-                                                  strip().
-                                                  replace("-", " ").
-                                                  replace("+", " ").
-                                                  replace(")", " ").
-                                                  replace("(", " ")).__str__()
+                analyzed_heading = analyze_mesh(heading)
                 self.locations[analyzed_heading] = i
                 self.headings.append((location.strip(), analyzed_heading))
 
@@ -46,6 +50,7 @@ class MeSHTree:
                 yield heading
             else:
                 break
+
 
 def download_mesh(path: Path = DEFAULT_PATH, year: str = MESH_YEAR) -> None:
     os.makedirs(str(path), exist_ok=True)

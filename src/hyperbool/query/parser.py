@@ -2,6 +2,7 @@ import datetime
 from abc import abstractmethod
 from calendar import monthrange
 from copy import copy, deepcopy
+from typing import List
 
 import lucene
 from lupyne import engine
@@ -87,22 +88,39 @@ class Atom(ParseNode):
     def __ast__(self):
         return AtomAST(query=self.unit.query, field=self.field)
 
+    @staticmethod
+    def has_mesh_field(mapped_fields: List[str]) -> bool:
+        return "mesh_heading_list" in mapped_fields or \
+               "mesh_major_heading_list" in mapped_fields or \
+               "mesh_qualifier_list" in mapped_fields
+
     def __query__(self, tree: MeSHTree):
         mapped_fields = deepcopy(self.field.lucene_fields())
 
-        # TODO: would be great to have the ability to add in
-        #       custom expansion methods at this point.
+        # Perform the subsumption (explosion) of MeSH terms.
         expansion_atoms = []
         if self.field.field_op is None:
-            if "mesh_heading_list" in mapped_fields:
+            if self.has_mesh_field(mapped_fields):
                 for heading in tree.explode(self.unit.query):
-                    expansion_atoms.append(Q.phrase("mesh_heading_list", heading))
+                    expansion_atoms.append(Q.regexp("mesh_heading_list", heading))
                 mapped_fields.remove("mesh_heading_list")
+
+        # Special case for MeSH query with qualifier.
+        if isinstance(self.unit, MeSHAndQualifierAtom):
+            lhs = [Q.phrase(f, self.unit.query[0]) for f in mapped_fields]
+            rhs = Q.phrase("mesh_qualifier_list", self.unit.query[1])
+            return Q.boolean(search.BooleanClause.Occur.MUST,
+                             *[
+                                 Q.any(*lhs + expansion_atoms),
+                                 rhs
+                             ])
 
         # Phrases.
         if isinstance(self.unit, QueryAtom):
-            if "mesh_heading_list" in mapped_fields:
+            op = Q.phrase
+            if self.has_mesh_field(mapped_fields):
                 self.unit.quoted = True
+                op = Q.regexp
 
             if not self.unit.quoted:
                 if len(mapped_fields) == 1:
@@ -110,8 +128,8 @@ class Atom(ParseNode):
                 return Q.any(*[Q.all(*[Q.term(f, q) for q in self.unit.query.split()]) for f in mapped_fields] + expansion_atoms)
 
             if len(mapped_fields) == 1:
-                return Q.any(*[Q.phrase(mapped_fields[0], *self.unit.query.split())] + expansion_atoms)
-            return Q.any(*[Q.phrase(f, *self.unit.query.split()) for f in mapped_fields] + expansion_atoms)
+                return Q.any(*[op(mapped_fields[0], *self.unit.query.split())] + expansion_atoms)
+            return Q.any(*[op(f, *self.unit.query.split()) for f in mapped_fields] + expansion_atoms)
 
         # Dates.
         elif isinstance(self.unit, DateAtom):
@@ -187,6 +205,23 @@ class QueryAtom(UnitAtom):
 
     def __repr__(self):
         return f"Phrase({self.query})"
+
+
+class MeSHAndQualifierAtom(UnitAtom):
+    def __init__(self, tokens):
+        self._query = tokens[0]
+        self._qualifier = tokens[1]
+
+    @property
+    def query(self):
+        return self._query, self._qualifier
+
+    @classmethod
+    def from_str(cls, s: str) -> "UnitAtom":
+        return cls([s])
+
+    def __repr__(self):
+        return f"{self._query}/{self._qualifier}"
 
 
 class DateAtom(UnitAtom):
@@ -266,12 +301,13 @@ AND, OR, NOT = map(
 )
 
 # Atoms.
-valid_chars = "α-–_,/'’"
+valid_chars = "α-–_,'’"
 valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars + " ") ^ Literal("*")))
 valid_quoteless_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars) ^ Literal("*")))
 
 phrase = Combine(Literal('"') + valid_phrase + Literal('"')).set_parse_action(QueryAtom)
 quoteless_phrase = (Combine(OneOrMore(valid_quoteless_phrase | White(" ", max=1) + ~(White() | AND | OR | NOT)))).set_parse_action(QueryAtom)
+mesh_and_qualifier = (Word(alphanums + valid_chars + " ") + Suppress(Literal("/")) + Word(alphanums + valid_chars + " ")).set_parse_action(MeSHAndQualifierAtom)
 date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(DateAtom)
 date_range = (date + Suppress(":") + date).set_parse_action(DateRangeAtom)
 
@@ -279,7 +315,7 @@ date_range = (date + Suppress(":") + date).set_parse_action(DateRangeAtom)
 field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(FieldUnit)
 
 # Atom + Fields.
-atom = Group(((date_range | date | quoteless_phrase | phrase) + Optional(field_restriction))).set_parse_action(Atom)
+atom = Group((mesh_and_qualifier + field_restriction) | ((date_range | date | quoteless_phrase | phrase) + Optional(field_restriction))).set_parse_action(Atom)
 
 # Final expression.
 expression << infix_notation(atom, [(NOT, 2, OpAssoc.RIGHT, NotOp), (OR, 2, OpAssoc.LEFT, BinOp), (AND, 2, OpAssoc.LEFT, BinOp)])
