@@ -2,13 +2,12 @@ import datetime
 import json
 import os
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
+from typing import List
 
 import appdirs
-from datetime import datetime
 import ir_measures
-import requests
 from dataclasses_json import dataclass_json
 from ir_measures import Qrel
 

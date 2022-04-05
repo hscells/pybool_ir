@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import List
 
 import ir_measures
-from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc
+from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc, Qrel
 from lupyne import engine
+from tqdm import tqdm
 
 import hyperbool
 import hyperbool.pubmed.index as ix
-from hyperbool.experiments.collections import Collection
+from hyperbool.experiments.collections import Collection, Topic
 from hyperbool.query.parser import PubmedQueryParser, Q
 
 
@@ -44,16 +45,31 @@ class RetrievalExperiment:
         # Variables required to run experiments.
         self.run_path = run_path
         self.index_path = index_path
-        self.index: engine.Indexer = None
+        self.index: engine.Indexer
         self.collection = collection
         self.eval_measures = eval_measures
+        self.query_parser = query_parser
 
+        self._parsed_queries = []
+        for topic in tqdm(self.collection.topics, desc="query parsing"):
+            self._parsed_queries.append(self.query_parser.parse(topic.raw_query))
+
+    @property
+    def queries(self):
         # Right at the last step, we can apply the date restrictions.
-        self.queries = dict([(topic.identifier, Q.all(*[query_parser.parse(topic.raw_query)] + [query_parser.parse(f"{topic.date_from}:{topic.date_to}[dp]")])) for topic in collection.topics])
+        return dict([(topic.identifier,
+                      Q.all(
+                          *[self.query_parser.node_to_lucene(self._parsed_queries[i])] +
+                           [self.query_parser.parse_lucene(f"{topic.date_from}:{topic.date_to}[dp]")]
+                      )) for i, topic in enumerate(self.collection.topics)])
+
+    def count(self) -> List[int]:
+        for query_id, lucene_query in tqdm(self.queries.items(), desc="        count"):
+            yield self.index.count(lucene_query)
 
     # This private method runs the retrieval.
     def __retrieval(self) -> List[ScoredDoc]:
-        for query_id, lucene_query in self.queries.items():
+        for query_id, lucene_query in tqdm(self.queries.items(), desc="    retrieval"):
             # Documents can remain un-scored for efficiency (?).
             hits = self.index.search(lucene_query, scored=False)
             for hit in hits:
@@ -94,7 +110,7 @@ class RetrievalExperiment:
                 f.write(f"{scored_doc.query_id} Q0 {scored_doc.doc_id} {rank} {1 + scored_doc.score} {self._identifier[:7]}\n")
                 scored_docs.append(scored_doc)
 
-        self._run = scored_doc
+        self._run = scored_docs
         return self._run
 
     # Helper methods for evaluating the run.
@@ -123,3 +139,13 @@ class RetrievalExperiment:
             "index.path": str(self.index_path.absolute()),
         }
         return json.dumps(d)
+
+
+def AdHocExperiment(index_path: Path, raw_query: str,
+                    query_parser: PubmedQueryParser = PubmedQueryParser()) -> RetrievalExperiment:
+    collection = Collection("adhoc", [Topic(identifier="0",
+                                            description="ad-hoc topic",
+                                            raw_query=raw_query,
+                                            date_from="1600/01/01",
+                                            date_to="3000/01/01")], [])
+    return RetrievalExperiment(index_path, collection, query_parser)
