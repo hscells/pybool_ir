@@ -25,6 +25,9 @@ nltk = "*"
 trectools = "*"
 ir-measures = "*"
 appdirs = "*"
+unsync = "*"
+aiofiles = "*"
+aiofile = "*"
 
 [dev-packages]
 
