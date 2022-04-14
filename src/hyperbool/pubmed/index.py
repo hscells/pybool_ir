@@ -202,9 +202,9 @@ def parse_medline_date(date_str: str) -> Tuple[int, int, int]:
         day = "01"
 
     # Now we can convert the parts to ints for our proper datetime object.
-    year = int(year)
-    month = month_str_to_month(month) if month else 1  # Special parsing for months.
-    day = int(day) if day else 1
+    year = int(year) if year is not None else 1960
+    month = month_str_to_month(month) if month is not None else 1  # Special parsing for months.
+    day = int(day) if day is not None else 1
     return year, month, day
 
 
@@ -229,9 +229,9 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
             month = journal_date_element.find("Month") or journal_date_element.find("Season")
             day = journal_date_element.find("Day")
 
-            year = int(year.text) if year else 1960
-            month = month_str_to_month(month.text) if month else 1
-            day = int(day.text) if day else 1
+            year = int(year.text) if year is not None else 1960
+            month = month_str_to_month(month.text) if month is not None else 1
+            day = int(day.text) if day is not None else 1
 
         # Okay, *finally* we have integer representations.
         # First, the month could be less than 1. (!?)
@@ -348,10 +348,16 @@ def read_folder(folder: Path) -> Iterable[PubmedArticle]:
             yield article
 
 
+def read_jsonl(file: Path) -> Iterable[PubmedArticle]:
+    with open(file, "r") as f:
+        for line in f:
+            yield PubmedArticle.from_json(line)
+
+
 def bulk_index(indexer: engine.IndexWriter, docs: Iterable[PubmedArticle]) -> None:
     for i, doc in tqdm(enumerate(docs), desc="indexing progress", position=1, total=None):
         add_document(indexer, doc)
-        if i % 30_000 == 0:
+        if i % 100_000 == 0:
             indexer.commit()
     indexer.commit()
 
@@ -368,8 +374,10 @@ class Index:
         # too many factors that make it almost impossible.
         #   1. async methods cannot deal with the time it takes to open files.
         #   2. pylucne is not thread safe (?); indexing must be synchronous.
-
-        articles = read_folder(baseline_path)
+        if baseline_path.is_dir():
+            articles = read_folder(baseline_path)
+        else:
+            articles = read_jsonl()
         bulk_index(self.index, articles)
 
     def search(self, query: str, n_hits=10,

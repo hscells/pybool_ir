@@ -23,7 +23,3 @@ def download_baseline(path: Path):
         util.download_file("https://" + FTP_URL + FTP_BASELINE_CWD + filename, path / filename)
 
     ftp.close()
-
-
-if __name__ == '__main__':
-    download_baseline(Path("./data/baseline"))
