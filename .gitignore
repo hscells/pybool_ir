@@ -13,4 +13,5 @@ data
 __pycache__
 *.pyc
 
+*.jsonl
 hs_err_pid*
