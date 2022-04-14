@@ -28,6 +28,7 @@ appdirs = "*"
 unsync = "*"
 aiofiles = "*"
 aiofile = "*"
+click = "*"
 
 [dev-packages]
 
