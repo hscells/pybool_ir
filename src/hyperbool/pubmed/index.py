@@ -1,3 +1,4 @@
+import calendar
 import gzip
 import os
 import xml.etree.ElementTree as et
@@ -31,19 +32,85 @@ class PubmedArticle:
     keyword_list: List[str]
 
 
+possible_days = {"1st": "1", "2nd": "2", "3rd": "3"}
+for _i in range(31):
+    str_i = str(_i)
+    possible_days[f"{_i}th"] = str_i
+
+
 def day_str_to_day(day_str: str) -> Tuple[str, bool]:
     if day_str.isdigit():
         return day_str, True
-    possible_days = {"1st": "1", "2nd": "2", "3rd": "3"}
-    for i in range(31):
-        str_i = str(i)
-        possible_days[f"{i}th"] = str_i
     if day_str in possible_days:
         return possible_days[day_str], True
     return day_str, False
 
 
+# Journals vary in the way the publication date appears on an issue.
+# Some journals include just the year, whereas others include the year
+# plus month or year plus month plus day. And, some journals use the
+# year and season (e.g., Winter 1997). The publication date in the
+# citation is recorded as it appears in the journal.
+years = {
+    "jan": 1,
+    "feb": 2,
+    "mar": 3,
+    "apr": 4,
+    "may": 5,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
+    "set": 9,
+    "january": 1,
+    "february": 2,
+    "march": 3,
+    "april": 4,
+    "june": 6,
+    "july": 7,
+    "august": 8,
+    "september": 9,
+    "october": 10,
+    "november": 11,
+    "december": 12,
+}
+
+# Dates with a season are set as:
+# winter = January, spring = April, summer = July and fall = October.
+seasons = {"winter": 1, "spring": 4, "summer": 7, "fall": 10, "autumn": 10, "[season]": 1}
+
+# There is no "official" documentation for how these dates are interpreted.
+# So let's just use the same dates as the seasons as a pretty good guess.
+quarters = {
+    "1st quarter": 1,
+    "2nd quarter": 4,
+    "3rd quarter": 7,
+    "4th quarter": 10,
+    "first quarter": 1,
+    "second quarter": 4,
+    "third quarter": 7,
+    "fourth quarter": 10,
+}
+
+possible_months = {**years, **seasons, **quarters}
+
+
 def month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -> int:
+    # Strange months that fail to parse
+    # qctober -> misspelling of October.
+    # oktober -> German for October.
+    # abr -> ?
+    # aig -> ?
+    # aut -> Autumn (?)
+    # mai -> German for May (?)
+    # mac -> ?
+    # oc -> ?
+    # t -> ?
+    # c -> ?
+
     # If we have a digit, just return it and assume month.
     if month_str.isdigit():
         return int(month_str)
@@ -63,56 +130,6 @@ def month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -
     if month_str.isdigit():
         return int(month_str)
 
-    # Journals vary in the way the publication date appears on an issue.
-    # Some journals include just the year, whereas others include the year
-    # plus month or year plus month plus day. And, some journals use the
-    # year and season (e.g., Winter 1997). The publication date in the
-    # citation is recorded as it appears in the journal.
-    years = {
-        "jan": 1,
-        "feb": 2,
-        "mar": 3,
-        "apr": 4,
-        "may": 5,
-        "jun": 6,
-        "jul": 7,
-        "aug": 8,
-        "sep": 9,
-        "oct": 10,
-        "nov": 11,
-        "dec": 12,
-        "set": 9,
-        "january": 1,
-        "february": 2,
-        "march": 3,
-        "april": 4,
-        "june": 6,
-        "july": 7,
-        "august": 8,
-        "september": 9,
-        "october": 10,
-        "november": 11,
-        "december": 12,
-    }
-
-    # Dates with a season are set as:
-    # winter = January, spring = April, summer = July and fall = October.
-    seasons = {"winter": 1, "spring": 4, "summer": 7, "fall": 10, "autumn": 10, "[season]": 1}
-
-    # There is no "official" documentation for how these dates are interpreted.
-    # So let's just use the same dates as the seasons as a pretty good guess.
-    quarters = {
-        "1st quarter": 1,
-        "2nd quarter": 4,
-        "3rd quarter": 7,
-        "4th quarter": 10,
-        "first quarter": 1,
-        "second quarter": 4,
-        "third quarter": 7,
-        "fourth quarter": 10,
-    }
-
-    possible_months = {**years, **seasons, **quarters}
     if month_str in possible_months:
         return possible_months[month_str]
 
@@ -141,57 +158,53 @@ def parse_medline_date(date_str: str) -> Tuple[int, int, int]:
         replace(" to ", "-"). \
         replace(" & ", "-")
     dur_parts = date_str.split("-")
-    try:
-        # Now that we have the LHS of the duration,
-        # let's parse it like normal.
-        if len(dur_parts) > 1:
-            return parse_medline_date(dur_parts[0])
+    # Now that we have the LHS of the duration,
+    # let's parse it like normal.
+    if len(dur_parts) > 1:
+        date_str = dur_parts[0]
 
-        # We now have to split the string and run some
-        # tests to determine what the parts of the date are.
-        date_parts = date_str.split()
+    # We now have to split the string and run some
+    # tests to determine what the parts of the date are.
+    date_parts = date_str.split()
 
-        if len(date_parts) == 1:  # Likely we are looking at a year.
-            if date_parts[0].isdigit():  # Almost certainly a year.
-                year = date_parts[0]
-            else:  # If not, it almost certainly is a month.
-                month = date_parts[0]
+    if len(date_parts) == 1:  # Likely we are looking at a year.
+        if date_parts[0].isdigit():  # Almost certainly a year.
+            year = date_parts[0]
+        else:  # If not, it almost certainly is a month.
+            month = date_parts[0]
 
-        elif len(date_parts) == 2:  # Almost certainly a year and a month.
-            year, month = date_parts
-        elif len(date_parts) >= 3:  # Almost certainly a year-month-day combination.
-            year, month, day = date_parts[:3]
-            # Oops, some dates look like `2021 4th Quarter`,
-            # so we need to do a switch-a-roo.
-            if day.lower() == "quarter":
-                month = f"{month} {day}"
-                day = "1"
-        else:
-            raise Exception(f"{date_str} is unparseable\nguru meditation: {date_parts}")
+    elif len(date_parts) == 2:  # Almost certainly a year and a month.
+        year, month = date_parts
+    elif len(date_parts) >= 3:  # Almost certainly a year-month-day combination.
+        year, month, day = date_parts[:3]
+        # Oops, some dates look like `2021 4th Quarter`,
+        # so we need to do a switch-a-roo.
+        if day.lower() == "quarter":
+            month = f"{month} {day}"
+            day = "1"
+    else:
+        raise Exception(f"{date_str} is unparseable\nguru meditation: {date_parts}")
 
-        # For the case that the date is something like `Fall 2021`
-        # instead of the more typical `2021 Fall`:
-        if not year.isdigit():
-            year, month = month, year
+    # For the case that the date is something like `Fall 2021`
+    # instead of the more typical `2021 Fall`:
+    if not year.isdigit():
+        year, month = month, year
 
-        # Let's find out if the day could be a day.
-        day, is_day = day_str_to_day(day)
-        if not is_day:  # Hmm, maybe the day isn't a day.
-            # Therefore, the day is likely a month!
-            day, month = month, day
-            day, _ = day_str_to_day(day)
+    # Let's find out if the day could be a day.
+    day, is_day = day_str_to_day(day)
+    if not is_day:  # Hmm, maybe the day isn't a day.
+        # Therefore, the day is likely a month!
+        day, month = month, day
+        day, _ = day_str_to_day(day)
 
-        # Hail Mary at this point, who knows what the day is!
-        if not day.isdigit():
-            day = "01"
+    # Hail Mary at this point, who knows what the day is!
+    if not day.isdigit():
+        day = "01"
 
-        # Now we can convert the parts to ints for our proper datetime object.
-        year = int(year)
-        month = month_str_to_month(month) if month else 1  # Special parsing for months.
-        day = int(day) if day else 1
-    except Exception as e:
-        print(date_str)
-        raise e
+    # Now we can convert the parts to ints for our proper datetime object.
+    year = int(year)
+    month = month_str_to_month(month) if month else 1  # Special parsing for months.
+    day = int(day) if day else 1
     return year, month, day
 
 
@@ -206,34 +219,38 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
     journal_date_element = element.find(
         "MedlineCitation/Article/Journal/JournalIssue/PubDate"
     )
-    try:
-        medline_date: Element
-        if journal_date_element is not None:
-            medline_date = journal_date_element.find("MedlineDate")
-            if medline_date is not None:
-                try:
-                    year, month, day = parse_medline_date(medline_date.text)
-                except Exception as e:
-                    print(medline_date.text)
-                    raise e
-            else:
-                year = journal_date_element.find("Year")
-                month = journal_date_element.find("Month") or journal_date_element.find(
-                    "Season"
-                )
-                day = journal_date_element.find("Day")
-
-                year = int(year.text) if year else 1960
-                month = month_str_to_month(month.text) if month else 1
-                day = int(day.text) if day else 1
-            if int(month) < 1:
-                month = 1
-            article_date = datetime(year=year, month=month, day=day)
+    medline_date: Element
+    if journal_date_element is not None:
+        medline_date = journal_date_element.find("MedlineDate")
+        if medline_date is not None:
+            year, month, day = parse_medline_date(medline_date.text)
         else:
-            raise Exception("no journal date element found")
-    except Exception as e:
-        print(medline_date.text)
-        raise e
+            year = journal_date_element.find("Year")
+            month = journal_date_element.find("Month") or journal_date_element.find("Season")
+            day = journal_date_element.find("Day")
+
+            year = int(year.text) if year else 1960
+            month = month_str_to_month(month.text) if month else 1
+            day = int(day.text) if day else 1
+
+        # Okay, *finally* we have integer representations.
+        # First, the month could be less than 1. (!?)
+        if month < 1:
+            month = 1
+
+        # If the "month" is >12, likely the day and month need switching.
+        if month > 12:
+            month, day = day, month
+
+        # If for some reason, the day exceeds the number of days
+        # in a specific month, then just reset the day to the first.
+        ndays = calendar.mdays[month] + (month == calendar.February and calendar.isleap(year))
+        if day > ndays:
+            day = 1
+
+        article_date = datetime(year=year, month=month, day=day)
+    else:
+        raise Exception("no journal date element found")
     abstract_el = element.findall("MedlineCitation/Article/Abstract/AbstractText")
     return PubmedArticle(
         pmid=pmid,
@@ -331,9 +348,11 @@ def read_folder(folder: Path) -> Iterable[PubmedArticle]:
             yield article
 
 
-def bulk_index(indexer: engine.IndexWriter, docs: List[PubmedArticle]) -> None:
+def bulk_index(indexer: engine.IndexWriter, docs: Iterable[PubmedArticle]) -> None:
     for i, doc in tqdm(enumerate(docs), desc="indexing progress", position=1, total=None):
         add_document(indexer, doc)
+        if i % 30_000 == 0:
+            indexer.commit()
     indexer.commit()
 
 
@@ -349,7 +368,6 @@ class Index:
         # too many factors that make it almost impossible.
         #   1. async methods cannot deal with the time it takes to open files.
         #   2. pylucne is not thread safe (?); indexing must be synchronous.
-        #   3.
 
         articles = read_folder(baseline_path)
         bulk_index(self.index, articles)
