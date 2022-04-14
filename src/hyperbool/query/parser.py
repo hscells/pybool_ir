@@ -18,7 +18,7 @@ from pyparsing import (
 
 from hyperbool.pubmed.mesh import MeSHTree
 from hyperbool.query import fields
-from hyperbool.query.ast import OperatorAST, AtomAST, ASTNode
+from hyperbool.query.ast import OperatorNode, AtomNode, ASTNode
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
@@ -54,7 +54,7 @@ class OpNode:
                                       self.operator, self.operands)
 
     def __ast__(self):
-        return OperatorAST(operator=self.operator, children=[node.__ast__() for node in self.operands])
+        return OperatorNode(operator=self.operator, children=[node.__ast__() for node in self.operands])
 
 
 class NotOp(OpNode, ParseNode):
@@ -86,7 +86,7 @@ class Atom(ParseNode):
         return f"{self.unit}[{self.field}]"
 
     def __ast__(self):
-        return AtomAST(query=self.unit.query, field=self.field)
+        return AtomNode(query=self.unit.raw_query, field=self.field)
 
     @staticmethod
     def has_mesh_field(mapped_fields: List[str]) -> bool:
@@ -180,6 +180,11 @@ class UnitAtom(object):
     def query(self):
         raise NotImplementedError()
 
+    @property
+    @abstractmethod
+    def raw_query(self):
+        raise NotImplementedError()
+
     @classmethod
     @abstractmethod
     def from_str(cls, s: str) -> "UnitAtom":
@@ -188,16 +193,21 @@ class UnitAtom(object):
 
 class QueryAtom(UnitAtom):
     def __init__(self, tokens):
+        self._raw_query = tokens[0]
         self._query = analyzer.parse(tokens[0]).__str__()
-        self.quoted = True if self.query.startswith('"') and self.query.endswith('"') else False
+        self.quoted = True if self._query.startswith('"') and self._query.endswith('"') else False
         self.fuzzy = True if "*" in tokens[0] else False
 
         if self.quoted:
-            self._query = self.query[1:-1]
+            self._query = self._query[1:-1]
 
     @property
     def query(self):
         return self._query
+
+    @property
+    def raw_query(self):
+        return self._raw_query
 
     @classmethod
     def from_str(cls, s: str) -> "QueryAtom":
@@ -215,6 +225,10 @@ class MeSHAndQualifierAtom(UnitAtom):
     @property
     def query(self):
         return self._query, self._qualifier
+
+    @property
+    def raw_query(self):
+        return f"{self._query}/{self._qualifier}"
 
     @classmethod
     def from_str(cls, s: str) -> "UnitAtom":
@@ -241,12 +255,20 @@ class DateAtom(UnitAtom):
     def query(self):
         return self._query
 
+    @property
+    def raw_query(self):
+        if self.day is not None:
+            return f"{self.year}/{self.month}/{self.day}"
+        if self.month is not None:
+            return f"{self.year}/{self.month}"
+        return f"{self.year}"
+
     @classmethod
     def from_str(cls, s: str) -> "DateAtom":
         return cls(s.split("/"))
 
     def __repr__(self):
-        return f"{self.year}/{self.month}/{self.day}"
+        return self.raw_query
 
 
 class DateRangeAtom(UnitAtom):
@@ -258,6 +280,10 @@ class DateRangeAtom(UnitAtom):
     @property
     def query(self):
         return self._query
+
+    @property
+    def raw_query(self):
+        return self.__repr__()
 
     @classmethod
     def from_str(cls, s: str) -> "DateRangeAtom":
@@ -287,7 +313,7 @@ class FieldUnit:
         return fields.mapping[self.field]
 
 
-default_field = FieldUnit(["Title/Abstract"])
+default_field = FieldUnit(["All Fields"])
 # --------------------------------------
 
 # Makes parsing faster. (?)
