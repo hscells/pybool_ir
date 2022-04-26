@@ -29,6 +29,7 @@ unsync = "*"
 aiofiles = "*"
 aiofile = "*"
 click = "*"
+seaborn = "*"
 
 [dev-packages]
 

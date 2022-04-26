@@ -8,7 +8,7 @@ from typing import List
 import ir_measures
 from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc, Qrel
 from lupyne import engine
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 import hyperbool
 import hyperbool.pubmed.index as ix
@@ -64,12 +64,12 @@ class RetrievalExperiment:
                       )) for i, topic in enumerate(self.collection.topics)])
 
     def count(self) -> List[int]:
-        for query_id, lucene_query in tqdm(self.queries.items(), desc="        count"):
+        for query_id, lucene_query in tqdm(self.queries.items(), desc="count"):
             yield self.index.count(lucene_query)
 
     # This private method runs the retrieval.
     def __retrieval(self) -> List[ScoredDoc]:
-        for query_id, lucene_query in tqdm(self.queries.items(), desc="    retrieval"):
+        for query_id, lucene_query in tqdm(self.queries.items(), desc="retrieval"):
             # Documents can remain un-scored for efficiency (?).
             hits = self.index.search(lucene_query, scored=False)
             for hit in hits:

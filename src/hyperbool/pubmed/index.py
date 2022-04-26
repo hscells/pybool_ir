@@ -13,9 +13,11 @@ from dataclasses_json import dataclass_json
 from lupyne import engine
 from tqdm.auto import tqdm
 
-from hyperbool.pubmed.mesh import analyze_mesh
-
 assert lucene.getVMEnv() or lucene.initVM()
+
+DEFAULT_YEAR = 1900
+DEFAULT_MONTH = 1
+DEFAULT_DAY = 1
 
 
 @dataclass_json
@@ -51,7 +53,8 @@ def day_str_to_day(day_str: str) -> Tuple[str, bool]:
 # plus month or year plus month plus day. And, some journals use the
 # year and season (e.g., Winter 1997). The publication date in the
 # citation is recorded as it appears in the journal.
-years = {
+_months = {
+    # Short English months.
     "jan": 1,
     "feb": 2,
     "mar": 3,
@@ -65,6 +68,7 @@ years = {
     "nov": 11,
     "dec": 12,
     "set": 9,
+    # Full English months.
     "january": 1,
     "february": 2,
     "march": 3,
@@ -76,15 +80,33 @@ years = {
     "october": 10,
     "november": 11,
     "december": 12,
+    # Full German month names.
+    "januar": 1,
+    "februar": 2,
+    "marz": 3,
+    "märz": 3,
+    "mai": 5,
+    "juni": 6,
+    "juli": 7,
+    "oktober": 10,
+    "dezember": 12,
+    # Unknown language month names.
+    "desember": 12,  # Indonesian?
 }
 
 # Dates with a season are set as:
 # winter = January, spring = April, summer = July and fall = October.
-seasons = {"winter": 1, "spring": 4, "summer": 7, "fall": 10, "autumn": 10, "[season]": 1}
+_seasons = {"winter": 1,
+            "spring": 4,
+            "summer": 7,
+            "fall": 10,
+            "autumn": 10,
+            "aut": 10,
+            "[season]": 1}
 
 # There is no "official" documentation for how these dates are interpreted.
 # So let's just use the same dates as the seasons as a pretty good guess.
-quarters = {
+_quarters = {
     "1st quarter": 1,
     "2nd quarter": 4,
     "3rd quarter": 7,
@@ -95,18 +117,25 @@ quarters = {
     "fourth quarter": 10,
 }
 
-possible_months = {**years, **seasons, **quarters}
+_possible_months = {**_months, **_seasons, **_quarters}
 
 
 def month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -> int:
     # Strange months that fail to parse
+    # metaboliche -> ?
+    # easter -> ?
+    # trimest -> ?
     # qctober -> misspelling of October.
     # oktober -> German for October.
+    # suppl -> ?
     # abr -> ?
     # aig -> ?
+    # ago -> ?
     # aut -> Autumn (?)
+    # dic -> ?
     # mai -> German for May (?)
     # mac -> ?
+    # noc -> ?
     # oc -> ?
     # t -> ?
     # c -> ?
@@ -130,12 +159,12 @@ def month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -
     if month_str.isdigit():
         return int(month_str)
 
-    if month_str in possible_months:
-        return possible_months[month_str]
+    if month_str in _possible_months:
+        return _possible_months[month_str]
 
-    for k, v in possible_months.items():
+    for k, v in _possible_months.items():
         if k in month_str:
-            return v
+            return int(v)
 
     # We may wish to gracefully fail, but if not,
     # just assume the month string is garbage and
@@ -149,9 +178,9 @@ def month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -
 
 
 def parse_medline_date(date_str: str) -> Tuple[int, int, int]:
-    day = "1"
-    month = "1"
-    year = "1"
+    day = str(DEFAULT_DAY)
+    month = str(DEFAULT_MONTH)
+    year = str(DEFAULT_YEAR)
     date_str = date_str.lower(). \
         replace(".", ""). \
         replace(",", ""). \
@@ -199,12 +228,12 @@ def parse_medline_date(date_str: str) -> Tuple[int, int, int]:
 
     # Hail Mary at this point, who knows what the day is!
     if not day.isdigit():
-        day = "01"
+        day = str(DEFAULT_DAY)
 
     # Now we can convert the parts to ints for our proper datetime object.
-    year = int(year) if year is not None else 1960
-    month = month_str_to_month(month) if month is not None else 1  # Special parsing for months.
-    day = int(day) if day is not None else 1
+    year = int(year) if year is not None else DEFAULT_YEAR
+    month = month_str_to_month(month) if month is not None else DEFAULT_MONTH  # Special parsing for months.
+    day = int(day) if day is not None else DEFAULT_DAY
     return year, month, day
 
 
@@ -229,14 +258,14 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
             month = journal_date_element.find("Month") or journal_date_element.find("Season")
             day = journal_date_element.find("Day")
 
-            year = int(year.text) if year is not None else 1960
-            month = month_str_to_month(month.text) if month is not None else 1
-            day = int(day.text) if day is not None else 1
+            year = int(year.text) if year is not None else DEFAULT_YEAR
+            month = month_str_to_month(month.text) if month is not None else DEFAULT_MONTH
+            day = int(day.text) if day is not None else DEFAULT_DAY
 
         # Okay, *finally* we have integer representations.
         # First, the month could be less than 1. (!?)
         if month < 1:
-            month = 1
+            month = DEFAULT_MONTH
 
         # If the "month" is >12, likely the day and month need switching.
         if month > 12:
@@ -246,7 +275,10 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
         # in a specific month, then just reset the day to the first.
         ndays = calendar.mdays[month] + (month == calendar.February and calendar.isleap(year))
         if day > ndays:
-            day = 1
+            day = DEFAULT_DAY
+
+        if year < 1700:
+            year = DEFAULT_YEAR
 
         article_date = datetime(year=year, month=month, day=day)
     else:
@@ -267,19 +299,22 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
             )
         ],
         mesh_heading_list=[
-            analyze_mesh(el.text)
+            # analyze_mesh(el.text)
+            el.text
             for el in element.findall(
                 "MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName"
             )
         ],
         mesh_major_heading_list=[
-            analyze_mesh(el.text)
+            # analyze_mesh(el.text)
+            el.text
             for el in element.findall(
                 "MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName[@MajorTopicYN='Y']"
             )
         ],
         mesh_qualifier_list=[
-            analyze_mesh(el.text)
+            # analyze_mesh(el.text)
+            el.text
             for el in element.findall(
                 "MedlineCitation/MeshHeadingList/MeshHeading/QualifierName"
             )
@@ -344,6 +379,7 @@ def read_file(fname: Path) -> Iterable[PubmedArticle]:
 def read_folder(folder: Path) -> Iterable[PubmedArticle]:
     valid_files = [f for f in os.listdir(str(folder)) if not f.startswith(".")]
     for file in tqdm(valid_files, desc="folder progress", total=len(valid_files), position=0):
+        print(file)
         for article in read_file(folder / file):
             yield article
 
@@ -374,10 +410,11 @@ class Index:
         # too many factors that make it almost impossible.
         #   1. async methods cannot deal with the time it takes to open files.
         #   2. pylucne is not thread safe (?); indexing must be synchronous.
+        assert isinstance(baseline_path, Path)
         if baseline_path.is_dir():
             articles = read_folder(baseline_path)
         else:
-            articles = read_jsonl()
+            articles = read_jsonl(baseline_path)
         bulk_index(self.index, articles)
 
     def search(self, query: str, n_hits=10,

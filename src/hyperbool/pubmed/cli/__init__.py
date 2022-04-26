@@ -74,4 +74,4 @@ def process_baseline(baseline_path: Path, output_path: Path):
 def index_baseline(baseline_path: Path, index_path: Path):
     from hyperbool.pubmed.index import Index
     with Index(Path(index_path)) as ix:
-        ix.bulk_index(baseline_path)
+        ix.bulk_index(Path(baseline_path))

@@ -4,7 +4,10 @@
 mapping = {
     # TODO: At the moment, the fields must be arrays, since
     #       the title and the abstract are separate fields.
-    "All Fields": ["title", "abstract", "keyword_list", "mesh_heading_list", "publication_type"],
+    "All Fields": ["title",
+                   "abstract",
+                   "keyword_list",
+                   "publication_type"],
     "Title/Abstract": ["title", "abstract"],
     "tiab": ["title", "abstract"],
     "Title": ["title"],
@@ -19,11 +22,11 @@ mapping = {
     "MeSH Terms": ["mesh_heading_list"],
     "Mesh": ["mesh_heading_list"],
     "Pharmacological Action": ["mesh_heading_list"],  # TODO: This is unlikely correct.
-    "Supplementary Concept": ["mesh_heading_list"],  # TODO: This is unlikely correct.
     "nm": ["mesh_heading_list"],  # TODO: This is unlikely correct.
 
     "sh": ["mesh_qualifier_list"],
     "Subheading": ["mesh_qualifier_list"],
+    "Supplementary Concept": ["mesh_qualifier_list"],  # TODO: This is unlikely correct.
 
     "MAJR": ["mesh_major_heading_list"],
     "majr": ["mesh_major_heading_list"],

@@ -61,9 +61,10 @@ class NotOp(OpNode, ParseNode):
     def __query__(self, tree: MeSHTree):
         lhs = self.operands[0].__query__(tree)
         rhs = self.operands[1].__query__(tree)
-        return Q.boolean(search.BooleanClause.Occur.SHOULD,
-                         *[lhs,
-                           Q.boolean(search.BooleanClause.Occur.MUST_NOT, rhs)])
+        builder = search.BooleanQuery.Builder()
+        builder.add(lhs, search.BooleanClause.Occur.SHOULD)
+        builder.add(rhs, search.BooleanClause.Occur.MUST_NOT)
+        return builder.build()
 
 
 class BinOp(OpNode, ParseNode):
@@ -99,11 +100,18 @@ class Atom(ParseNode):
 
         # Perform the subsumption (explosion) of MeSH terms.
         expansion_atoms = []
-        if self.field.field_op is None:
-            if self.has_mesh_field(mapped_fields):
+        if self.has_mesh_field(mapped_fields):
+            if self.field.field_op is None:
                 for heading in tree.explode(self.unit.query):
                     expansion_atoms.append(Q.regexp("mesh_heading_list", heading))
-                mapped_fields.remove("mesh_heading_list")
+                expansion_atoms = expansion_atoms[1:]
+                if mapped_fields[0] == "mesh_qualifier_list":
+                    expansion_atoms.append(Q.term(mapped_fields[0], self.unit.analyzed_query))
+                else:
+                    expansion_atoms.append(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
+                return Q.any(*expansion_atoms)
+            else:
+                return Q.any(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
 
         # Special case for MeSH query with qualifier.
         if isinstance(self.unit, MeSHAndQualifierAtom):
@@ -117,19 +125,13 @@ class Atom(ParseNode):
 
         # Phrases.
         if isinstance(self.unit, QueryAtom):
-            op = Q.phrase
-            if self.has_mesh_field(mapped_fields):
-                self.unit.quoted = True
-                op = Q.regexp
-
-            if not self.unit.quoted:
+            if " " not in self.unit.analyzed_query:
                 if len(mapped_fields) == 1:
-                    return Q.any(*[Q.all(*[Q.term(mapped_fields[0], q) for q in self.unit.query.split()])] + expansion_atoms)
-                return Q.any(*[Q.all(*[Q.term(f, q) for q in self.unit.query.split()]) for f in mapped_fields] + expansion_atoms)
-
+                    return Q.term(mapped_fields[0], self.unit.analyzed_query)
+                return Q.any(*[Q.term(f, self.unit.analyzed_query) for f in mapped_fields])
             if len(mapped_fields) == 1:
-                return Q.any(*[op(mapped_fields[0], *self.unit.query.split())] + expansion_atoms)
-            return Q.any(*[op(f, *self.unit.query.split()) for f in mapped_fields] + expansion_atoms)
+                return Q.near(mapped_fields[0], *self.unit.analyzed_query.split())
+            return Q.any(*[Q.near(f, *self.unit.analyzed_query.split()) for f in mapped_fields])
 
         # Dates.
         elif isinstance(self.unit, DateAtom):
@@ -177,12 +179,16 @@ class Atom(ParseNode):
 class UnitAtom(object):
     @property
     @abstractmethod
-    def query(self):
+    def query(self) -> str:
         raise NotImplementedError()
 
     @property
+    def analyzed_query(self) -> str:
+        return analyzer.parse(self.query).__str__()
+
+    @property
     @abstractmethod
-    def raw_query(self):
+    def raw_query(self) -> str:
         raise NotImplementedError()
 
     @classmethod
@@ -194,7 +200,7 @@ class UnitAtom(object):
 class QueryAtom(UnitAtom):
     def __init__(self, tokens):
         self._raw_query = tokens[0]
-        self._query = analyzer.parse(tokens[0]).__str__()
+        self._query = tokens[0]  # analyzer.parse(tokens[0]).__str__()
         self.quoted = True if self._query.startswith('"') and self._query.endswith('"') else False
         self.fuzzy = True if "*" in tokens[0] else False
 

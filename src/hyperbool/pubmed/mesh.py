@@ -1,28 +1,23 @@
 import os
 from pathlib import Path
-from typing import List, Dict
+from typing import List
 
 import appdirs
 import lucene
-from lupyne import engine
 
 from hyperbool import util
 from hyperbool.pubmed.datautils import MESH_YEAR, MESH_URL
 
 DEFAULT_PATH = Path(appdirs.user_data_dir("hyperbool")) / "data/mesh"
 
-assert lucene.getVMEnv() or lucene.initVM()
-analyzer = engine.analyzers.Analyzer.standard()
-
 
 def analyze_mesh(heading: str) -> str:
-    return analyzer.parse(heading.
-                          lower().
-                          strip().
-                          replace("-", " ").
-                          replace("+", " ").
-                          replace(")", " ").
-                          replace("(", " ")).__str__()
+    return heading.lower(). \
+        strip(). \
+        replace("-", " "). \
+        replace("+", " "). \
+        replace(")", " "). \
+        replace("(", " ")
 
 
 class MeSHTree:
@@ -36,13 +31,15 @@ class MeSHTree:
                 heading, location = line.replace("\n", "").strip().split(";")
                 # TODO: Need to index mesh headings in the same way.
                 analyzed_heading = analyze_mesh(heading)
+                # analyzed_heading = heading
                 self.locations[analyzed_heading] = i
-                self.headings.append((location.strip(), analyzed_heading))
+                self.headings.append((location.strip(), heading))
 
     def explode(self, heading: str) -> List[str]:
-        if heading.lower() not in self.locations:
+        analyzed_heading = analyze_mesh(heading)
+        if analyzed_heading not in self.locations:
             return []
-        index = self.locations[heading.lower()]
+        index = self.locations[analyzed_heading]
         exploded_location, exploded_heading = self.headings[index]
         for indexed_heading in self.headings[index:]:
             location, heading = indexed_heading
@@ -50,6 +47,14 @@ class MeSHTree:
                 yield heading
             else:
                 break
+
+    def map_heading(self, heading: str) -> str:
+        analyzed_heading = analyze_mesh(heading)
+        if analyzed_heading not in self.locations:
+            return heading
+        index = self.locations[analyzed_heading]
+        _, found_heading = self.headings[index]
+        return str(found_heading).strip()
 
 
 def download_mesh(path: Path = DEFAULT_PATH, year: str = MESH_YEAR) -> None:
