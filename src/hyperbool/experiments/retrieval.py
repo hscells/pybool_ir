@@ -76,6 +76,17 @@ class RetrievalExperiment:
                 yield ScoredDoc(query_id, hit["pmid"], 0)
         self.date_completed = datetime.now()
 
+    def doc(self, pmid:str):
+        hits = self.index.search(f"pmid:{pmid}")
+        for hit in hits:
+            article: ix.PubmedArticle = ix.PubmedArticle.from_dict(hit.dict("mesh_heading_list",
+                                                                            "mesh_qualifier_list",
+                                                                            "mesh_major_heading_list",
+                                                                            "keyword_list",
+                                                                            "publication_type"))
+            return article
+        return None
+
     # The following two methods provide the `with [..] as [..]` syntax.
     def __enter__(self):
         self.index = ix.load_index(self.index_path)

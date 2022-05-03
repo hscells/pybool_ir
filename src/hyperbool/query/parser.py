@@ -101,14 +101,13 @@ class Atom(ParseNode):
         # Perform the subsumption (explosion) of MeSH terms.
         expansion_atoms = []
         if self.has_mesh_field(mapped_fields):
+            if mapped_fields[0] == "mesh_qualifier_list":
+                return Q.term(mapped_fields[0], self.unit.query.replace(" and ", " & "))
             if self.field.field_op is None:
                 for heading in tree.explode(self.unit.query):
                     expansion_atoms.append(Q.regexp("mesh_heading_list", heading))
                 expansion_atoms = expansion_atoms[1:]
-                if mapped_fields[0] == "mesh_qualifier_list":
-                    expansion_atoms.append(Q.term(mapped_fields[0], self.unit.analyzed_query))
-                else:
-                    expansion_atoms.append(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
+                expansion_atoms.append(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
                 return Q.any(*expansion_atoms)
             else:
                 return Q.any(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
@@ -333,7 +332,7 @@ AND, OR, NOT = map(
 )
 
 # Atoms.
-valid_chars = "α-–_,'’"
+valid_chars = "α-–_,'’&"
 valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars + " ") ^ Literal("*")))
 valid_quoteless_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars) ^ Literal("*")))
 

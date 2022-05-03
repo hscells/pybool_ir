@@ -31,6 +31,7 @@ class PubmedArticle:
     mesh_heading_list: List[str]
     mesh_qualifier_list: List[str]
     mesh_major_heading_list: List[str]
+    supplementary_concept_list: List[str]
     keyword_list: List[str]
 
 
@@ -284,14 +285,14 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
     else:
         raise Exception("no journal date element found")
     abstract_el = element.findall("MedlineCitation/Article/Abstract/AbstractText")
+    chemical_list_el = element.findall("MedlineCitation/ChemicalList/Chemical/NameOfSubstance")
+    suppl_mesh_list_el = element.findall("MedlineCitation/SupplMeshList/SupplMeshName")
     return PubmedArticle(
         pmid=pmid,
         date=article_date,
         # date_revised=field_data.YES if article_revised_element is not None else field_data.NO,
         title="".join(element.find("MedlineCitation/Article/ArticleTitle").itertext()),
-        abstract=" ".join(["".join(x.itertext()) for x in abstract_el])
-        if abstract_el is not None
-        else "",
+        abstract=" ".join(["".join(x.itertext()) for x in abstract_el]) if abstract_el is not None else "",
         publication_type=[
             el.text
             for el in element.findall(
@@ -319,6 +320,15 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
                 "MedlineCitation/MeshHeadingList/MeshHeading/QualifierName"
             )
         ],
+        supplementary_concept_list=[
+                                       el.text
+                                       for el in chemical_list_el
+                                       if chemical_list_el is not None
+                                   ] + [
+                                       el.text
+                                       for el in suppl_mesh_list_el
+                                       if suppl_mesh_list_el is not None
+                                   ],
         keyword_list=[
             el.text for el in element.findall("MedlineCitation/KeywordList/Keyword")
         ],
@@ -335,6 +345,7 @@ def set_index_fields(indexer: engine.Indexer):
     indexer.set("mesh_heading_list", engine.Field.String, stored=True)
     indexer.set("mesh_qualifier_list", engine.Field.String, stored=True)
     indexer.set("mesh_major_heading_list", engine.Field.String, stored=True)
+    indexer.set("supplementary_concept_list", engine.Field.String, stored=True)
 
 
 def load_mem_index() -> engine.Indexer:
@@ -358,6 +369,8 @@ def add_document(indexer: engine.IndexWriter, doc: PubmedArticle) -> None:
         doc.mesh_heading_list = []
     if doc.mesh_qualifier_list is None or not all(doc.mesh_qualifier_list):
         doc.mesh_heading_list = []
+    if doc.supplementary_concept_list is None or not all(doc.supplementary_concept_list):
+        doc.supplementary_concept_list = []
     if doc.publication_type is None or not all(doc.publication_type):
         doc.publication_type = []
     indexer.add(doc.to_dict())
