@@ -337,15 +337,15 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
 
 def set_index_fields(indexer: engine.Indexer):
     indexer.set("pmid", engine.Field.String, stored=True, docValuesType="sorted")
-    indexer.set("date", engine.DateTimeField, stored=True)
-    indexer.set("title", engine.Field.Text, stored=True)
-    indexer.set("abstract", engine.Field.Text, stored=True)
-    indexer.set("keyword_list", engine.Field.Text, stored=True)
-    indexer.set("publication_type", engine.Field.Text, stored=True)
-    indexer.set("mesh_heading_list", engine.Field.String, stored=True)
-    indexer.set("mesh_qualifier_list", engine.Field.String, stored=True)
-    indexer.set("mesh_major_heading_list", engine.Field.String, stored=True)
-    indexer.set("supplementary_concept_list", engine.Field.String, stored=True)
+    indexer.set("date", engine.DateTimeField, stored=False)
+    indexer.set("title", engine.Field.Text, stored=False)
+    indexer.set("abstract", engine.Field.Text, stored=False)
+    indexer.set("keyword_list", engine.Field.Text, stored=False)
+    indexer.set("publication_type", engine.Field.String, stored=False)
+    indexer.set("mesh_heading_list", engine.Field.String, stored=False)
+    indexer.set("mesh_qualifier_list", engine.Field.String, stored=False)
+    indexer.set("mesh_major_heading_list", engine.Field.String, stored=False)
+    indexer.set("supplementary_concept_list", engine.Field.String, stored=False)
 
 
 def load_mem_index() -> engine.Indexer:
@@ -403,8 +403,8 @@ def read_jsonl(file: Path) -> Iterable[PubmedArticle]:
             yield PubmedArticle.from_json(line)
 
 
-def bulk_index(indexer: engine.IndexWriter, docs: Iterable[PubmedArticle]) -> None:
-    for i, doc in tqdm(enumerate(docs), desc="indexing progress", position=1, total=None):
+def bulk_index(indexer: engine.IndexWriter, docs: Iterable[PubmedArticle], total=None) -> None:
+    for i, doc in tqdm(enumerate(docs), desc="indexing progress", position=1, total=total):
         add_document(indexer, doc)
         if i % 100_000 == 0:
             indexer.commit()
@@ -424,11 +424,14 @@ class Index:
         #   1. async methods cannot deal with the time it takes to open files.
         #   2. pylucne is not thread safe (?); indexing must be synchronous.
         assert isinstance(baseline_path, Path)
+        total = None
         if baseline_path.is_dir():
             articles = read_folder(baseline_path)
         else:
+            with open(baseline_path) as f:
+                total = sum(1 for _ in f)
             articles = read_jsonl(baseline_path)
-        bulk_index(self.index, articles)
+        bulk_index(self.index, articles, total=total)
 
     def search(self, query: str, n_hits=10,
                hit_formatter: str = "{pmid} {title}\n{date}\n{mesh_major_heading_list}\n{mesh_heading_list}\n{mesh_qualifier_list}\n--------------------"):

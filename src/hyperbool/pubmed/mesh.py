@@ -45,8 +45,6 @@ class MeSHTree:
             location, heading = indexed_heading
             if location.startswith(exploded_location):
                 yield heading
-            else:
-                break
 
     def map_heading(self, heading: str) -> str:
         analyzed_heading = analyze_mesh(heading)

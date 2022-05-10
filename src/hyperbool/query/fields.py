@@ -4,10 +4,8 @@
 mapping = {
     # TODO: At the moment, the fields must be arrays, since
     #       the title and the abstract are separate fields.
-    "All Fields": ["title",
-                   "abstract",
-                   "keyword_list",
-                   "publication_type"],
+    "All Fields": ["all_fields"],
+    "tw": ["all_fields"],
     "Title/Abstract": ["title", "abstract"],
     "tiab": ["title", "abstract"],
     "Title": ["title"],
@@ -19,14 +17,16 @@ mapping = {
     #       so in the future, we may wish to expand these fields.
     "mh": ["mesh_heading_list"],
     "MeSH": ["mesh_heading_list"],
+    "MESH": ["mesh_heading_list"],
     "MeSH Terms": ["mesh_heading_list"],
     "Mesh": ["mesh_heading_list"],
     "Pharmacological Action": ["mesh_heading_list"],  # TODO: This is unlikely correct.
-    "nm": ["mesh_heading_list"],  # TODO: This is unlikely correct.
+
+    "nm": ["supplementary_concept_list"],
+    "Supplementary Concept": ["supplementary_concept_list"],
 
     "sh": ["mesh_qualifier_list"],
     "Subheading": ["mesh_qualifier_list"],
-    "Supplementary Concept": ["mesh_qualifier_list"],  # TODO: This is unlikely correct.
 
     "MAJR": ["mesh_major_heading_list"],
     "majr": ["mesh_major_heading_list"],
@@ -47,5 +47,5 @@ mapping = {
 
     # TODO: No mapping yet. Empty list means the
     #       term is not included in the query.
-    "jour": [],
+    "jour": ["publication_type"],
 }

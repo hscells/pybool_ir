@@ -16,17 +16,32 @@ from hyperbool.experiments.collections import Collection, Topic
 from hyperbool.query.parser import PubmedQueryParser, Q
 
 
-class RetrievalExperiment:
+class LuceneSearcher:
+    def __init__(self, index_path: Path):
+        if isinstance(index_path, str):
+            index_path = Path(index_path)
+        self.index_path = index_path
+        self.index = None
+
+    # The following two methods provide the `with [..] as [..]` syntax.
+    def __enter__(self):
+        self.index = ix.load_index(self.index_path)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.index.close()
+        self.index = None
+
+
+class RetrievalExperiment(LuceneSearcher):
     def __init__(self, index_path: Path, collection: Collection,
                  query_parser: PubmedQueryParser = PubmedQueryParser(),
-                 eval_measures: List[Measure] = None, run_path: Path = None,
-                 filter_topics: List[str] = None):
-
+                 eval_measures: List[Measure] = None,
+                 run_path: Path = None, filter_topics: List[str] = None):
+        super().__init__(index_path)
         # Some arguments have default values that need updating.
         if eval_measures is None:
             eval_measures = [Precision, Recall, SetF]
-        if isinstance(index_path, str):
-            index_path = Path(index_path)
         if filter_topics is not None:
             filtered_topics = list(filter(lambda x: x.identifier in filter_topics, collection.topics))
             filtered_qrels = list(filter(lambda x: x.query_id in filter_topics, collection.qrels))
@@ -44,15 +59,20 @@ class RetrievalExperiment:
 
         # Variables required to run experiments.
         self.run_path = run_path
-        self.index_path = index_path
-        self.index: engine.Indexer
         self.collection = collection
         self.eval_measures = eval_measures
         self.query_parser = query_parser
 
         self._parsed_queries = []
+
+        filtered_topics = []
+        filtered_qrels = []
         for topic in tqdm(self.collection.topics, desc="query parsing"):
-            self._parsed_queries.append(self.query_parser.parse(topic.raw_query))
+            if len(topic.raw_query) > 0:
+                self._parsed_queries.append(self.query_parser.parse(topic.raw_query))
+                filtered_topics.append(topic)
+                filtered_qrels += [x for x in collection.qrels if x.query_id == topic.identifier]
+        self.collection = Collection(collection.identifier, filtered_topics, filtered_qrels)
 
     @property
     def queries(self):
@@ -76,24 +96,17 @@ class RetrievalExperiment:
                 yield ScoredDoc(query_id, hit["pmid"], 0)
         self.date_completed = datetime.now()
 
-    def doc(self, pmid:str):
+    def doc(self, pmid: str):
         hits = self.index.search(f"pmid:{pmid}")
         for hit in hits:
             article: ix.PubmedArticle = ix.PubmedArticle.from_dict(hit.dict("mesh_heading_list",
                                                                             "mesh_qualifier_list",
                                                                             "mesh_major_heading_list",
                                                                             "keyword_list",
-                                                                            "publication_type"))
+                                                                            "publication_type",
+                                                                            "supplementary_concept_list"))
             return article
         return None
-
-    # The following two methods provide the `with [..] as [..]` syntax.
-    def __enter__(self):
-        self.index = ix.load_index(self.index_path)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.index.close()
 
     # This is what one would actually call to get the runs.
     @property
@@ -153,10 +166,11 @@ class RetrievalExperiment:
 
 
 def AdHocExperiment(index_path: Path, raw_query: str,
-                    query_parser: PubmedQueryParser = PubmedQueryParser()) -> RetrievalExperiment:
+                    query_parser: PubmedQueryParser = PubmedQueryParser(),
+                    date_from="1900/01/01", date_to="3000/01/01") -> RetrievalExperiment:
     collection = Collection("adhoc", [Topic(identifier="0",
                                             description="ad-hoc topic",
                                             raw_query=raw_query,
-                                            date_from="1600/01/01",
-                                            date_to="3000/01/01")], [])
+                                            date_from=date_from,
+                                            date_to=date_to)], [])
     return RetrievalExperiment(index_path, collection, query_parser)

@@ -83,13 +83,14 @@ def parse_clef_tar_topic(topic_str: str, date_from: str = "1940", date_to: str =
     topic_query = topic_query.replace("Total references = 1551", "") \
         .replace("“", '"') \
         .replace("”", '"') \
+        .replace(")* ", ') ') \
         .replace(" AND 1992/01/01:2015/11/30[crdt]", "") \
         .replace(" AND 1940/01/01:2012/09/21[crdt]", "") \
         .replace(" AND 1940/01/01:2015/02/28[crdt]", "") \
         .replace(" AND 1966/01/01:2017/03/30[crdt]", "") \
         .replace(" AND 1940/01/01:2016/01/19[crdt]", "")
 
-    return Topic(identifier=topic_id,
+    return Topic(identifier=topic_id.strip(),
                  description=topic_description,
                  raw_query=topic_query,
                  date_from=date_from,
@@ -101,7 +102,7 @@ def __load_clef_tar_2017_training(name: str) -> Collection:
                            git_hash=__GITHASH_CLEFTAR,
                            year=2017,
                            subfolder="training",
-                           qrels_path="qrels/train.combined.qrels",
+                           qrels_path="qrels/train.abs.qrels",
                            topics_path="topics_train/",
                            topic_ids=["1", "11", "14", "19", "23", "28", "33", "35", "37", "38",
                                       "4", "43", "44", "45", "50", "53", "54", "55", "6", "9"],
@@ -113,7 +114,7 @@ def __load_clef_tar_2017_testing(name: str) -> Collection:
                            git_hash=__GITHASH_CLEFTAR,
                            year=2017,
                            subfolder="testing",
-                           qrels_path="qrels/test.combined.qrels",
+                           qrels_path="qrels/qrel_abs_test.txt",
                            topics_path="topics/",
                            topic_ids=["10", "12", "15", "16", "17", "18", "2", "21", "22", "25", "26",
                                       "27", "29", "31", "32", "34", "36", "39", "40", "41", "42", "47",
@@ -150,7 +151,7 @@ def __load_clef_tar_2018_testing(name: str) -> Collection:
                                       "CD010864", "CD011053", "CD011126", "CD011420", "CD011431", "CD011515",
                                       "CD011602", "CD011686", "CD011912", "CD011926", "CD012009", "CD012010",
                                       "CD012083", "CD012165", "CD012179", "CD012216", "CD012281", "CD012599"],
-                           pubmed_topic_ids=["CD008587", "CD009263", "CD011420", "CD011912", "CD011926"],
+                           pubmed_topic_ids=["CD011420", "CD011912", "CD011926"],
                            pubdates_path="2018-TAR/Task1/Testing/pubdates.txt")
 
 

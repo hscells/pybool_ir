@@ -97,23 +97,35 @@ class Atom(ParseNode):
 
     def __query__(self, tree: MeSHTree):
         mapped_fields = deepcopy(self.field.lucene_fields())
-
-        # Perform the subsumption (explosion) of MeSH terms.
         expansion_atoms = []
-        if self.has_mesh_field(mapped_fields):
-            if mapped_fields[0] == "mesh_qualifier_list":
-                return Q.term(mapped_fields[0], self.unit.query.replace(" and ", " & "))
-            if self.field.field_op is None:
-                for heading in tree.explode(self.unit.query):
-                    expansion_atoms.append(Q.regexp("mesh_heading_list", heading))
-                expansion_atoms = expansion_atoms[1:]
-                expansion_atoms.append(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
-                return Q.any(*expansion_atoms)
-            else:
-                return Q.any(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
+
+        # Special field that is not actually indexed.
+        if mapped_fields[0] == "all_fields":
+            headings = [x for x in list(tree.locations.keys()) if self.unit.query.lower() in x]
+            for heading in headings:
+                for exploded_heading in tree.explode(heading):
+                    expansion_atoms.append(Q.regexp("mesh_heading_list", exploded_heading))
+                    expansion_atoms.append(Q.regexp("publication_type", exploded_heading))
+            if " " in self.unit.analyzed_query:
+                expansion_atoms += [Q.near("title", *self.unit.analyzed_query.split()),
+                                    Q.near("abstract", *self.unit.analyzed_query.split())]
+            return Q.any(
+                *[
+                     Q.wildcard("title", self.unit.analyzed_query),
+                     Q.wildcard("abstract", self.unit.analyzed_query),
+                     Q.phrase("title", self.unit.analyzed_query),
+                     Q.phrase("abstract", self.unit.analyzed_query),
+                     Q.term("title", self.unit.analyzed_query),
+                     Q.term("abstract", self.unit.analyzed_query)
+                 ] + expansion_atoms
+            )
 
         # Special case for MeSH query with qualifier.
         if isinstance(self.unit, MeSHAndQualifierAtom):
+            if self.field.field_op is None:
+                for heading in tree.explode(self.unit.query[0]):
+                    expansion_atoms.append(Q.regexp("mesh_heading_list", heading))
+
             lhs = [Q.phrase(f, self.unit.query[0]) for f in mapped_fields]
             rhs = Q.phrase("mesh_qualifier_list", self.unit.query[1])
             return Q.boolean(search.BooleanClause.Occur.MUST,
@@ -122,12 +134,40 @@ class Atom(ParseNode):
                                  rhs
                              ])
 
+        # Perform the subsumption (explosion) of MeSH terms.
+        if self.has_mesh_field(mapped_fields):
+            if mapped_fields[0] == "mesh_qualifier_list":
+                return Q.term(mapped_fields[0], self.unit.query.lower().replace(" and ", " & "))
+            if self.field.field_op is None:
+                for heading in tree.explode(self.unit.query):
+                    expansion_atoms.append(Q.regexp("mesh_heading_list", heading))
+                expansion_atoms = expansion_atoms[1:]
+                expansion_atoms.append(Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query)))
+                return Q.any(*expansion_atoms)
+            else:
+                return Q.regexp(mapped_fields[0], tree.map_heading(self.unit.query))
+
+        if "publication_type" in mapped_fields:
+            if self.field.field_op is None:
+                for heading in tree.explode(self.unit.query):
+                    expansion_atoms.append(Q.regexp("publication_type", heading))
+                return Q.any(*expansion_atoms)
+            else:
+                return Q.regexp("publication_type", tree.map_heading(self.unit.query))
+
+        if "supplementary_concept_list" in mapped_fields:
+            return Q.any(*[Q.regexp("supplementary_concept_list", self.unit.query.lower()),
+                           Q.regexp("supplementary_concept_list", self.unit.query)])
+
         # Phrases.
         if isinstance(self.unit, QueryAtom):
             if " " not in self.unit.analyzed_query:
+                op = Q.term
+                if self.unit.fuzzy:
+                    op = Q.wildcard
                 if len(mapped_fields) == 1:
-                    return Q.term(mapped_fields[0], self.unit.analyzed_query)
-                return Q.any(*[Q.term(f, self.unit.analyzed_query) for f in mapped_fields])
+                    return op(mapped_fields[0], self.unit.analyzed_query)
+                return Q.any(*[op(f, self.unit.analyzed_query) for f in mapped_fields])
             if len(mapped_fields) == 1:
                 return Q.near(mapped_fields[0], *self.unit.analyzed_query.split())
             return Q.any(*[Q.near(f, *self.unit.analyzed_query.split()) for f in mapped_fields])
@@ -332,13 +372,13 @@ AND, OR, NOT = map(
 )
 
 # Atoms.
-valid_chars = "α-–_,'’&"
+valid_chars = "α-–_,'’&*?"
 valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars + " ") ^ Literal("*")))
 valid_quoteless_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars) ^ Literal("*")))
 
 phrase = Combine(Literal('"') + valid_phrase + Literal('"')).set_parse_action(QueryAtom)
 quoteless_phrase = (Combine(OneOrMore(valid_quoteless_phrase | White(" ", max=1) + ~(White() | AND | OR | NOT)))).set_parse_action(QueryAtom)
-mesh_and_qualifier = (Word(alphanums + valid_chars + " ") + Suppress(Literal("/")) + Word(alphanums + valid_chars + " ")).set_parse_action(MeSHAndQualifierAtom)
+mesh_and_qualifier = (Suppress(Optional(Literal('"'))) + (Word(alphanums + valid_chars + " ") + Suppress(Literal("/")) + Word(alphanums + valid_chars + " ")) + Suppress(Optional(Literal('"')))).set_parse_action(MeSHAndQualifierAtom)
 date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(DateAtom)
 date_range = (date + Suppress(":") + date).set_parse_action(DateRangeAtom)
 
@@ -358,6 +398,7 @@ class PubmedQueryParser:
 
     @staticmethod
     def parse(raw_query: str) -> ParseNode:
+        raw_query = raw_query.replace(":NoExp", ":noexp")
         try:
             expression.scan_string(raw_query, debug=True)
         except Exception as e:
