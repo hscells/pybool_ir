@@ -223,14 +223,10 @@ def __load_sysrev_seed(name: str) -> Collection:
                 t = json.loads(line)
 
                 with open(topic_file, "a") as f:
-                    if t["id"] == "1":
-                        t["query"] = t["query"].replace("/adverse effects", "")
                     if t["id"] == "32":
                         t["query"] = t["query"].replace("Ï", "I")
-                    if t["id"] == "42":
-                        t["query"] = t["query"].replace("/methods", "").replace("/standards", "")
                     if t["id"] == "51":
-                        t["query"] = t["query"][:-2].replace("*Staphylococcus", "Staphylococcus")
+                        t["query"] = t["query"][:-2]
 
                     f.write(Topic(identifier=t["id"],
                                   description=t["search_name"],

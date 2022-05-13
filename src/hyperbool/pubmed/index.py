@@ -335,28 +335,28 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
     )
 
 
-def set_index_fields(indexer: engine.Indexer):
+def set_index_fields(indexer: engine.Indexer, store_fields: bool = False):
     indexer.set("pmid", engine.Field.String, stored=True, docValuesType="sorted")
-    indexer.set("date", engine.DateTimeField, stored=False)
-    indexer.set("title", engine.Field.Text, stored=False)
-    indexer.set("abstract", engine.Field.Text, stored=False)
-    indexer.set("keyword_list", engine.Field.Text, stored=False)
-    indexer.set("publication_type", engine.Field.String, stored=False)
-    indexer.set("mesh_heading_list", engine.Field.String, stored=False)
-    indexer.set("mesh_qualifier_list", engine.Field.String, stored=False)
-    indexer.set("mesh_major_heading_list", engine.Field.String, stored=False)
-    indexer.set("supplementary_concept_list", engine.Field.String, stored=False)
+    indexer.set("date", engine.DateTimeField, stored=store_fields)
+    indexer.set("title", engine.Field.Text, stored=store_fields)
+    indexer.set("abstract", engine.Field.Text, stored=store_fields)
+    indexer.set("keyword_list", engine.Field.Text, stored=store_fields)
+    indexer.set("publication_type", engine.Field.String, stored=store_fields)
+    indexer.set("mesh_heading_list", engine.Field.String, stored=store_fields)
+    indexer.set("mesh_qualifier_list", engine.Field.String, stored=store_fields)
+    indexer.set("mesh_major_heading_list", engine.Field.String, stored=store_fields)
+    indexer.set("supplementary_concept_list", engine.Field.String, stored=store_fields)
 
 
-def load_mem_index() -> engine.Indexer:
+def load_mem_index(store_fields: bool = False) -> engine.Indexer:
     indexer = engine.Indexer(directory=None)
-    set_index_fields(indexer)
+    set_index_fields(indexer, store_fields=store_fields)
     return indexer
 
 
-def load_index(path: Path) -> engine.Indexer:
+def load_index(path: Path, store_fields: bool = False) -> engine.Indexer:
     indexer = engine.Indexer(directory=str(path))
-    set_index_fields(indexer)
+    set_index_fields(indexer, store_fields=store_fields)
     return indexer
 
 
@@ -412,8 +412,9 @@ def bulk_index(indexer: engine.IndexWriter, docs: Iterable[PubmedArticle], total
 
 
 class Index:
-    def __init__(self, index_path: Path):
+    def __init__(self, index_path: Path, store_fields: bool = False):
         self.index_path = index_path
+        self.store_fields = store_fields
         self.index: engine.Indexer
 
     def bulk_index(self, baseline_path: Path):
@@ -454,7 +455,7 @@ class Index:
         return self.index.search(query, scores=False)
 
     def __enter__(self):
-        self.index = load_index(self.index_path)
+        self.index = load_index(self.index_path, store_fields=self.store_fields)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

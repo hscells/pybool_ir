@@ -1,20 +1,21 @@
 import hashlib
 import json
+import multiprocessing
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import ir_measures
 from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc, Qrel
 from lupyne import engine
+from tqdm.contrib.concurrent import process_map
 from tqdm.auto import tqdm
 
 import hyperbool
 import hyperbool.pubmed.index as ix
 from hyperbool.experiments.collections import Collection, Topic
 from hyperbool.query.parser import PubmedQueryParser, Q
-
 
 class LuceneSearcher:
     def __init__(self, index_path: Path):
@@ -67,12 +68,19 @@ class RetrievalExperiment(LuceneSearcher):
 
         filtered_topics = []
         filtered_qrels = []
-        for topic in tqdm(self.collection.topics, desc="query parsing"):
-            if len(topic.raw_query) > 0:
-                self._parsed_queries.append(self.query_parser.parse(topic.raw_query))
-                filtered_topics.append(topic)
-                filtered_qrels += [x for x in collection.qrels if x.query_id == topic.identifier]
+
+        parsed_queries = process_map(self._parse_queries_process, self.collection.topics, desc="query parsing")
+        for topic, parsed_query in parsed_queries:
+            self._parsed_queries.append(parsed_query)
+            filtered_topics.append(topic)
+            filtered_qrels += [x for x in collection.qrels if x.query_id == topic.identifier]
+
         self.collection = Collection(collection.identifier, filtered_topics, filtered_qrels)
+
+    def _parse_queries_process(self, t: Topic):
+        if len(t.raw_query) > 0:
+            return t, self.query_parser.parse(t.raw_query)
+        return None, None
 
     @property
     def queries(self):
