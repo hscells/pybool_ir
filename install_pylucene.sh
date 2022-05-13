@@ -30,7 +30,6 @@ export PATH="$PATH:$(pwd)/ant/bin"
 
 # Install jcc.
 # https://lucene.apache.org/pylucene/jcc/install.html
-pipenv shell
 cd pylucene
 pushd jcc
 python setup.py build
@@ -42,6 +41,8 @@ popd
 ANT=$(which ant) PYTHON=$(which python) JCC="python -m jcc --shared --arch x86_64 --wheel" NUM_FILES=10 make
 
 # Clean up the files.
-mv dist/lucene*.whl dist/lucene.whl
 cd ../
-pipenv update # Not required if using something other than pipenv.
+pipenv lock
+pipenv install pylucene/dist/*.whl
+pipenv sync
+true

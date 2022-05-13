@@ -12,15 +12,15 @@ This library is still under much development, and I haven't yet begun to go thro
 
 ### pipenv
 
-For dependency and environment management, I've decided to use pipenv. If you are installing things for the first time, you might need to comment out the `jcc` and `lucene` packages before you activate the environment with `pipenv shell`.
+For dependency and environment management, I've decided to use pipenv. Please read the following sections before attempting to use it.
 
 ### pylucene
 
-There is a bit of a barrier to entry at the moment in using this library. That is because many packages, particuarly the indexing and querying facilities, depend on the [pylucene](https://lucene.apache.org/pylucene/) library. Unfortunately there is some manual intervention that needs to be performed before you use `hyperbool`. I have tried to make this process as painless as possible, and it should work for mac and linux people. 
+There is a bit of a barrier to entry at the moment in using this library. That is because many sub-packages, particularly the indexing and querying facilities, depend on the [pylucene](https://lucene.apache.org/pylucene/) library. Unfortunately there is some manual intervention that needs to be performed before you use `hyperbool`. I have tried to make this process as painless as possible, and it should work for mac and linux people. 
 
- 1. Run the `install_pylucene.sh` script. This will attempt to download all the necessary files, move them to the correct spots, and then create the Python `.whl` file that contains the lucene python package (pylucene).
- 2. Modify the `Pipfile` such that the `lucene` dependency points to the `.whl` file you just created.
- 3. Activate your environment with `pipenv shell`. If this fails, then something has gone wrong. 
+ 1. Run `pipenv shell` to create a new environment in this directory.
+ 2. Run the `install_pylucene.sh` script. This will attempt to download all the necessary files, move them to the correct spots, and then create the Python `.whl` file that contains the lucene python package (pylucene). It also installs this package into the pipenv environment (for local development). If you are using another environment manager you should install the `.whl` file that contains pylucene and then install the hyperbool package (e.g., using the `setup.py`).
+ 4. Activate your environment with `pipenv shell`. If this fails, then something has gone wrong. 
 
 ### Downloading and indexing Pubmed
 
