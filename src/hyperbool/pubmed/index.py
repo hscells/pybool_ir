@@ -435,21 +435,29 @@ class Index:
         bulk_index(self.index, articles, total=total)
 
     def search(self, query: str, n_hits=10,
-               hit_formatter: str = "{pmid} {title}\n{date}\n{mesh_major_heading_list}\n{mesh_heading_list}\n{mesh_qualifier_list}\n--------------------"):
+               hit_formatter: str = None):
+        if hit_formatter is None and self.store_fields:
+            hit_formatter = "{pmid} {title}\n{date}\n{mesh_major_heading_list}\n{mesh_heading_list}\n{mesh_qualifier_list}\n--------------------"
+        elif hit_formatter is None:
+            hit_formatter = "{pmid} * https://pubmed.ncbi.nlm.nih.gov/{pmid}"
         hits = self.index.search(query, scores=False, mincount=n_hits)
-        print(len(hits))
+        print(f"hits: {len(hits)}")
         for hit in hits[:n_hits]:
-            article: PubmedArticle = PubmedArticle.from_dict(hit.dict("mesh_heading_list",
-                                                                      "mesh_qualifier_list",
-                                                                      "mesh_major_heading_list",
-                                                                      "keyword_list",
-                                                                      "publication_type"))
-            print(hit_formatter.format(pmid=article.pmid,
-                                       title=article.title,
-                                       date=article.date,
-                                       mesh_heading_list=article.mesh_heading_list,
-                                       mesh_qualifier_list=article.mesh_qualifier_list,
-                                       mesh_major_heading_list=article.mesh_major_heading_list))
+            if self.store_fields:
+                article: PubmedArticle = PubmedArticle.from_dict(hit.dict("mesh_heading_list",
+                                                                          "mesh_qualifier_list",
+                                                                          "mesh_major_heading_list",
+                                                                          "keyword_list",
+                                                                          "publication_type"))
+                print(hit_formatter.format(pmid=article.pmid,
+                                           title=article.title,
+                                           date=article.date,
+                                           mesh_heading_list=article.mesh_heading_list,
+                                           mesh_qualifier_list=article.mesh_qualifier_list,
+                                           mesh_major_heading_list=article.mesh_major_heading_list))
+            else:
+                article = hit.dict()
+                print(hit_formatter.format(pmid=article["pmid"]))
 
     def retrieve(self, query: str):
         return self.index.search(query, scores=False)

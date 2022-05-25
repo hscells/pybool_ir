@@ -26,8 +26,11 @@ There is a bit of a barrier to entry at the moment in using this library. That i
 
 Once you have activated the pipenv environment, a command will become available to handle downloading and indexing Pubmed data for you.
 
- 1. `hbindexer download-baseline -b PUBMED_PATH`
- 2. `hbindexer index -b PUBMED_PATH -i INDEX_PATH`
+ 1. `hyperbool download-pubmed -b PUBMED_PATH`
+ 2. `hyperbool index-pubmed -b PUBMED_PATH -i INDEX_PATH`
+ 3. Once indexed, you can test to see if everything is working by running `hyperbool search-pubmed -i INDEX_PATH`
+
+**Note** Please see the full options for each of these commands using the `-h` parameter to find out how to perform additional actions, like indexing with stored fields.
 
 ### Retrieval experiments
 
