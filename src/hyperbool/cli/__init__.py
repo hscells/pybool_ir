@@ -102,7 +102,17 @@ def index_baseline(baseline_path: Path, index_path: Path, store_fields: bool):
     required=True,
     help="location to the lucene index"
 )
-def search(index_path: Path):
+@click.option(
+    "-s",
+    "--store",
+    "store_fields",
+    default=False,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to display stored fields or not"
+)
+def search(index_path: Path, store_fields: bool):
     from hyperbool.pubmed.index import Index
     from hyperbool.query.parser import PubmedQueryParser
     from prompt_toolkit import PromptSession
@@ -119,7 +129,7 @@ def search(index_path: Path):
             except Exception as e:
                 raise ValidationError(message=str(e), cursor_position=-1)
 
-    with Index(Path(index_path)) as ix:
+    with Index(Path(index_path), store_fields=store_fields) as ix:
         print(f"hyperbool {hyperbool.__version__}")
         print(f"loaded: {ix.index_path}")
         session = PromptSession()
