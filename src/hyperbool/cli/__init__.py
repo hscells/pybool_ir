@@ -12,11 +12,21 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.version_option(version=hyperbool.__version__)
 def cli():
     """
-    hyperbool indexing command.
+    hyperbool utilities.
     """
 
 
-@cli.command("download-pubmed")
+@cli.group()
+def pubmed():
+    """Pubmed related commands."""
+
+
+@cli.group()
+def csur():
+    """CSUR related commands."""
+
+
+@pubmed.command("download")
 @click.option(
     "-b",
     "--baseline",
@@ -26,12 +36,12 @@ def cli():
     required=True,
     help="location to download Pubmed baseline"
 )
-def download_baseline(baseline_path: Path):
+def pubmed_download(baseline_path: Path):
     from hyperbool.pubmed.baseline import download_baseline
     download_baseline(Path(baseline_path))
 
 
-@cli.command("process-pubmed")
+@pubmed.command("process")
 @click.option(
     "-b",
     "--baseline",
@@ -50,14 +60,14 @@ def download_baseline(baseline_path: Path):
     required=True,
     help="location to write processed file"
 )
-def process_baseline(baseline_path: Path, output_path: Path):
+def pubmed_process(baseline_path: Path, output_path: Path):
     from hyperbool.pubmed.index import read_folder
     with open(Path(output_path), "w") as f:
         for article in tqdm(read_folder(Path(baseline_path)), desc="articles processed", position=1):
             f.write(f"{article.to_json()}\n")
 
 
-@cli.command("index-pubmed")
+@pubmed.command("index")
 @click.option(
     "-b",
     "--baseline",
@@ -86,13 +96,13 @@ def process_baseline(baseline_path: Path, output_path: Path):
     required=False,
     help="whether to store fields or not"
 )
-def index_baseline(baseline_path: Path, index_path: Path, store_fields: bool):
+def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
     from hyperbool.pubmed.index import Index
     with Index(Path(index_path), store_fields=store_fields) as ix:
         ix.bulk_index(Path(baseline_path))
 
 
-@cli.command("search-pubmed")
+@pubmed.command("search")
 @click.option(
     "-i",
     "--index",
@@ -112,7 +122,7 @@ def index_baseline(baseline_path: Path, index_path: Path, store_fields: bool):
     required=False,
     help="whether to display stored fields or not"
 )
-def search(index_path: Path, store_fields: bool):
+def pubmed_search(index_path: Path, store_fields: bool):
     from hyperbool.pubmed.index import Index
     from hyperbool.query.parser import PubmedQueryParser
     from prompt_toolkit import PromptSession
@@ -137,3 +147,29 @@ def search(index_path: Path, store_fields: bool):
             raw_query = session.prompt("?>", validator=QueryValidator())
             lucene_query = parser.parse_lucene(raw_query)
             ix.search(lucene_query)
+
+
+@csur.command("process")
+@click.option(
+    "-r",
+    "--raw",
+    "raw_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location of raw csur download"
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to write processed file"
+)
+def csur_process(raw_path: Path, output_path: Path):
+    from hyperbool.csur.parser import read_folder
+    with open(Path(output_path), "w") as f:
+        for review in read_folder(Path(raw_path)):
+            f.write(f"{review.to_json()}\n")

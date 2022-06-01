@@ -1,12 +1,17 @@
+import json
+import os
 import xml
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Iterable, Dict
 
 from dataclasses_json import dataclass_json
 from lxml import objectify
+from lxml.etree import ElementTextIterator
+from tqdm import tqdm
 
 
+@dataclass_json
 @dataclass
 class StudyCharacteristics:
     study_id: str
@@ -20,6 +25,7 @@ class StudyCharacteristics:
         return f"---- {self.study_id} ----\n[P] {self.population}\n[I] {self.interventions}\n[O] {self.outcomes}\n[NOTES] {self.notes}\n[METHODS] {self.methods}"
 
 
+@dataclass_json
 @dataclass
 class Study:
     study_id: str
@@ -34,19 +40,46 @@ class Study:
         return self.pmid is not None
 
 
-class CochraneReview():
+@dataclass_json
+@dataclass
+class CochraneReview:
+    id: str
+    title: str
+    type: str
+    summary: str
+    abstract: str
+    included_studies: List[Study]
+    included_study_characteristics: List[StudyCharacteristics]
+    appendices: Dict[str, str]
+
+
+class CochraneReviewParser:
     def __init__(self, fname: Path):
         with open(fname, "rb") as f:
             self.review: xml.etree.ElementTree = objectify.parse(f).getroot()
 
     def __itertext__(self, el, join_str=" ") -> str:
+        if isinstance(el, ElementTextIterator):
+            return join_str.join(text for text in el)
         return join_str.join(el.itertext() if el is not isinstance(el, str) else "")
+
+    def serialise(self) -> CochraneReview:
+        return CochraneReview(
+            id=self.id,
+            title=self.title,
+            type=self.type,
+            summary=self.summary,
+            abstract=self.abstract,
+            included_studies=[x.to_dict() for x in self.included_studies],
+            included_study_characteristics=[x.to_dict() for x in self.included_studies_characteristics],
+            appendices=self.appendices
+        )
 
     @property
     def title(self) -> str:
         if self.review.MAIN_TEXT.find("SUMMARY") is None:
             return self.__itertext__(self.review.COVER_SHEET.TITLE)
-        return self.review.MAIN_TEXT.SUMMARY.TITLE
+        return str(self.review.MAIN_TEXT.SUMMARY.TITLE)
 
     @property
     def id(self) -> str:
@@ -58,6 +91,8 @@ class CochraneReview():
 
     @property
     def summary(self) -> str:
+        if self.review.MAIN_TEXT.find("SUMMARY") is None:
+            return ""
         return self.__itertext__(self.review.MAIN_TEXT.SUMMARY.SUMMARY_BODY)
 
     @property
@@ -66,6 +101,8 @@ class CochraneReview():
 
     @property
     def included_studies_characteristics(self) -> List[StudyCharacteristics]:
+        if self.review.find("CHARACTERISTICS_OF_STUDIES") is None:
+            return []
         for study_el in self.review.CHARACTERISTICS_OF_STUDIES.CHARACTERISTICS_OF_INCLUDED_STUDIES.iterfind("INCLUDED_CHAR"):
             yield StudyCharacteristics(study_id=study_el.get("STUDY_ID"),
                                        methods=self.__itertext__(study_el.CHAR_METHODS) if study_el.find("CHAR_METHODS") is not None else None,
@@ -95,17 +132,27 @@ class CochraneReview():
                         pmid=pmid)
 
     @property
-    def population(self) -> str:
+    def population(self) -> List[str]:
         return [s.population for s in self.included_studies_characteristics]
 
     @property
-    def interventions(self) -> str:
+    def interventions(self) -> List[str]:
         return [s.interventions for s in self.included_studies_characteristics]
 
     @property
-    def outcomes(self) -> str:
+    def outcomes(self) -> List[str]:
         return [s.outcomes for s in self.included_studies_characteristics]
 
     @property
-    def appendices(self) -> str:
-        return [(self.__itertext__(el.TITLE), self.__itertext__(el.APPENDIX_BODY, join_str="\n")) for el in self.review.APPENDICES.findall("APPENDIX")]
+    def appendices(self) -> Dict[str, Any]:
+        if self.review.find("APPENDICES") is None:
+            return {}
+        return dict([(self.__itertext__(el.TITLE), self.__itertext__(el.APPENDIX_BODY, join_str="\n")) for el in self.review.APPENDICES.findall("APPENDIX")])
+
+
+def read_folder(folder: Path) -> Iterable[CochraneReview]:
+    valid_files = [f for f in os.listdir(str(folder)) if not f.startswith(".")]
+    progress = tqdm(valid_files, desc="folder progress", total=len(valid_files), position=0)
+    for file in progress:
+        progress.postfix = file
+        yield CochraneReviewParser(folder / file).serialise()

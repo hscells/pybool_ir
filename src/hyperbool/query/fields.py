@@ -29,6 +29,7 @@ mapping = {
     "Subheading": ["mesh_qualifier_list"],
 
     "MAJR": ["mesh_major_heading_list"],
+    "Majr": ["mesh_major_heading_list"],
     "majr": ["mesh_major_heading_list"],
 
     "Publication Type": ["publication_type"],
