@@ -418,12 +418,6 @@ class Index:
         self.index: engine.Indexer
 
     def bulk_index(self, baseline_path: Path):
-        # !! WARNING TO ALL YE WHO VISIT ME HERE !!
-        # Unfortunately, despite about three days of work to try
-        # making this function concurrent, it seems like there are
-        # too many factors that make it almost impossible.
-        #   1. async methods cannot deal with the time it takes to open files.
-        #   2. pylucne is not thread safe (?); indexing must be synchronous.
         assert isinstance(baseline_path, Path)
         total = None
         if baseline_path.is_dir():
