@@ -23,8 +23,8 @@ DEFAULT_DAY = 1
 @dataclass_json
 @dataclass
 class PubmedArticle:
-    pmid: str
-    date: datetime
+    id: str  # PMID
+    date: datetime  # Date that the PMID was actually published.
     title: str
     abstract: str
     publication_type: List[str]
@@ -35,17 +35,17 @@ class PubmedArticle:
     keyword_list: List[str]
 
 
-possible_days = {"1st": "1", "2nd": "2", "3rd": "3"}
+_possible_days = {"1st": "1", "2nd": "2", "3rd": "3"}
 for _i in range(31):
     str_i = str(_i)
-    possible_days[f"{_i}th"] = str_i
+    _possible_days[f"{_i}th"] = str_i
 
 
 def day_str_to_day(day_str: str) -> Tuple[str, bool]:
     if day_str.isdigit():
         return day_str, True
-    if day_str in possible_days:
-        return possible_days[day_str], True
+    if day_str in _possible_days:
+        return _possible_days[day_str], True
     return day_str, False
 
 
@@ -288,7 +288,7 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
     chemical_list_el = element.findall("MedlineCitation/ChemicalList/Chemical/NameOfSubstance")
     suppl_mesh_list_el = element.findall("MedlineCitation/SupplMeshList/SupplMeshName")
     return PubmedArticle(
-        pmid=pmid,
+        id=pmid,
         date=article_date,
         # date_revised=field_data.YES if article_revised_element is not None else field_data.NO,
         title="".join(element.find("MedlineCitation/Article/ArticleTitle").itertext()),
@@ -300,21 +300,18 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
             )
         ],
         mesh_heading_list=[
-            # analyze_mesh(el.text)
             el.text
             for el in element.findall(
                 "MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName"
             )
         ],
         mesh_major_heading_list=[
-            # analyze_mesh(el.text)
             el.text
             for el in element.findall(
                 "MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName[@MajorTopicYN='Y']"
             )
         ],
         mesh_qualifier_list=[
-            # analyze_mesh(el.text)
             el.text
             for el in element.findall(
                 "MedlineCitation/MeshHeadingList/MeshHeading/QualifierName"
@@ -336,8 +333,8 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
 
 
 def set_index_fields(indexer: engine.Indexer, store_fields: bool = False):
-    indexer.set("pmid", engine.Field.String, stored=True, docValuesType="sorted")
-    indexer.set("date", engine.DateTimeField, stored=store_fields)
+    indexer.set("id", engine.Field.String, stored=True, docValuesType="sorted")  # PMID
+    indexer.set("date", engine.DateTimeField, stored=store_fields)  # Date that the PMID was actually published.
     indexer.set("title", engine.Field.Text, stored=store_fields)
     indexer.set("abstract", engine.Field.Text, stored=store_fields)
     indexer.set("keyword_list", engine.Field.Text, stored=store_fields)
@@ -431,9 +428,9 @@ class Index:
     def search(self, query: str, n_hits=10,
                hit_formatter: str = None):
         if hit_formatter is None and self.store_fields:
-            hit_formatter = "--------------------\nPMID * {pmid} * https://pubmed.ncbi.nlm.nih.gov/{pmid}\nTITL * {title}\npublished: {date}\nMAJR * {mesh_major_heading_list}\nMESH * {mesh_heading_list}\nQUAL * {mesh_qualifier_list}\nSUPP * {supplementary_concept_list}\nKWRD * {keyword_list}\nPUBT * {publication_type}\n"
+            hit_formatter = "--------------------\nPMID * {id} * https://pubmed.ncbi.nlm.nih.gov/{id}\nTITL * {title}\npublished: {date}\nMAJR * {mesh_major_heading_list}\nMESH * {mesh_heading_list}\nQUAL * {mesh_qualifier_list}\nSUPP * {supplementary_concept_list}\nKWRD * {keyword_list}\nPUBT * {publication_type}\n"
         elif hit_formatter is None:
-            hit_formatter = "{pmid} * https://pubmed.ncbi.nlm.nih.gov/{pmid}"
+            hit_formatter = "{id} * https://pubmed.ncbi.nlm.nih.gov/{id}"
         hits = self.index.search(query, scores=False, mincount=n_hits)
         print(f"hits: {len(hits)}")
         for hit in hits[:n_hits]:
@@ -444,7 +441,7 @@ class Index:
                                                                           "supplementary_concept_list",
                                                                           "keyword_list",
                                                                           "publication_type"))
-                print(hit_formatter.format(pmid=article.pmid,
+                print(hit_formatter.format(pmid=article.id,
                                            title=article.title,
                                            date=article.date,
                                            mesh_heading_list=article.mesh_heading_list,
@@ -455,7 +452,7 @@ class Index:
                                            mesh_major_heading_list=article.mesh_major_heading_list))
             else:
                 article = hit.dict()
-                print(hit_formatter.format(pmid=article["pmid"]))
+                print(hit_formatter.format(pmid=article["id"]))
         print("====================")
 
     def retrieve(self, query: str):

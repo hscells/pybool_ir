@@ -101,11 +101,11 @@ class RetrievalExperiment(LuceneSearcher):
             # Documents can remain un-scored for efficiency (?).
             hits = self.index.search(lucene_query, scored=False)
             for hit in hits:
-                yield ScoredDoc(query_id, hit["pmid"], 0)
+                yield ScoredDoc(query_id, hit["id"], 0)
         self.date_completed = datetime.now()
 
     def doc(self, pmid: str):
-        hits = self.index.search(f"pmid:{pmid}")
+        hits = self.index.search(f"id:{pmid}")
         for hit in hits:
             article: ix.PubmedArticle = ix.PubmedArticle.from_dict(hit.dict("mesh_heading_list",
                                                                             "mesh_qualifier_list",

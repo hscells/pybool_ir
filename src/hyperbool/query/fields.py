@@ -43,8 +43,8 @@ mapping = {
     "Publication Date": ["date"],
     "dp": ["date"],
 
-    "PMID": ["pmid"],
-    "pmid": ["pmid"],
+    "PMID": ["id"],
+    "pmid": ["id"],
 
     # TODO: No mapping yet. Empty list means the
     #       term is not included in the query.
