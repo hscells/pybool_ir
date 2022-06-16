@@ -441,7 +441,7 @@ class Index:
                                                                           "supplementary_concept_list",
                                                                           "keyword_list",
                                                                           "publication_type"))
-                print(hit_formatter.format(pmid=article.id,
+                print(hit_formatter.format(id=article.id,
                                            title=article.title,
                                            date=article.date,
                                            mesh_heading_list=article.mesh_heading_list,
