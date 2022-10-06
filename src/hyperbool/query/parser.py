@@ -36,7 +36,7 @@ indexer = engine.Indexer(directory=None)
 
 class ParseNode(object):
     @abstractmethod
-    def __query__(self, tree: MeSHTree):
+    def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
         raise NotImplementedError()
 
     @abstractmethod
@@ -58,9 +58,9 @@ class OpNode:
 
 
 class NotOp(OpNode, ParseNode):
-    def __query__(self, tree: MeSHTree):
-        lhs = self.operands[0].__query__(tree)
-        rhs = self.operands[1].__query__(tree)
+    def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
+        lhs = self.operands[0].__query__(tree, optional_fields=optional_fields)
+        rhs = self.operands[1].__query__(tree, optional_fields=optional_fields)
         builder = search.BooleanQuery.Builder()
         builder.add(lhs, search.BooleanClause.Occur.SHOULD)
         builder.add(rhs, search.BooleanClause.Occur.MUST_NOT)
@@ -68,12 +68,12 @@ class NotOp(OpNode, ParseNode):
 
 
 class BinOp(OpNode, ParseNode):
-    def __query__(self, tree: MeSHTree):
+    def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
         if self.operator == "AND":
             op = Q.all
         else:
             op = Q.any
-        return op(*[operand.__query__(tree) for operand in self.operands])
+        return op(*[operand.__query__(tree, optional_fields=optional_fields) for operand in self.operands])
 
 
 # The following classes are used to create Lucene queries once parsed.
@@ -95,8 +95,11 @@ class Atom(ParseNode):
                "mesh_major_heading_list" in mapped_fields or \
                "mesh_qualifier_list" in mapped_fields
 
-    def __query__(self, tree: MeSHTree):
-        mapped_fields = deepcopy(self.field.lucene_fields())
+    def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
+        if optional_fields is not None and self.field.__repr__() in optional_fields:
+            mapped_fields = [self.field.__repr__()]
+        else:
+            mapped_fields = deepcopy(self.field.lucene_fields())
         expansion_atoms = []
 
         # Special field that is not actually indexed.
@@ -393,8 +396,9 @@ expression << infix_notation(atom, [(NOT, 2, OpAssoc.RIGHT, NotOp), (OR, 2, OpAs
 
 
 class PubmedQueryParser:
-    def __init__(self, tree: MeSHTree = MeSHTree()):
+    def __init__(self, tree: MeSHTree = MeSHTree(), optional_fields: List[str] = None):
         self.tree = tree
+        self.optional_fields = optional_fields
 
     @staticmethod
     def parse(raw_query: str) -> ParseNode:
@@ -410,7 +414,7 @@ class PubmedQueryParser:
         return self.node_to_lucene(self.parse(raw_query))  # .__str__()
 
     def node_to_lucene(self, node: ParseNode) -> Q:
-        return node.__query__(tree=self.tree)
+        return node.__query__(tree=self.tree, optional_fields=self.optional_fields)
 
     def parse_ast(self, raw_query: str) -> ASTNode:
         return self.parse(raw_query).__ast__()

@@ -17,6 +17,7 @@ import hyperbool.pubmed.index as ix
 from hyperbool.experiments.collections import Collection, Topic
 from hyperbool.query.parser import PubmedQueryParser, Q
 
+
 class LuceneSearcher:
     def __init__(self, index_path: Path):
         if isinstance(index_path, str):

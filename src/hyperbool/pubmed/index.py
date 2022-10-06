@@ -36,7 +36,7 @@ class PubmedArticle(object):
             "keyword_list": keyword_list
         })
         for field_name, field_value in optional_fields.items():
-            self.field_name = field_value
+            self.set(field_name, field_value)
 
     @staticmethod
     def from_dict(data: dict):
@@ -384,7 +384,7 @@ def set_index_fields(indexer: engine.Indexer, store_fields: bool = False, option
     indexer.set("supplementary_concept_list", engine.Field.String, stored=store_fields)
     if optional_fields is not None:
         for optional_field_name in optional_fields:
-            indexer.set(optional_field_name, engine.Field.String, stored=store_fields)
+            indexer.set(optional_field_name, engine.Field.Text, stored=store_fields)
 
 
 def load_mem_index(store_fields: bool = False, optional_fields: List[str] = None) -> engine.Indexer:
