@@ -97,8 +97,8 @@ def pubmed_process(baseline_path: Path, output_path: Path):
     help="whether to store fields or not"
 )
 def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
-    from hyperbool.pubmed.index import Index
-    with Index(Path(index_path), store_fields=store_fields) as ix:
+    from hyperbool.pubmed.index import PubmedIndexer
+    with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
         ix.bulk_index(Path(baseline_path))
 
 
@@ -123,7 +123,7 @@ def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
     help="whether to display stored fields or not"
 )
 def pubmed_search(index_path: Path, store_fields: bool):
-    from hyperbool.pubmed.index import Index
+    from hyperbool.pubmed.index import PubmedIndexer
     from hyperbool.query.parser import PubmedQueryParser
     from prompt_toolkit import PromptSession
     from prompt_toolkit.validation import Validator
@@ -139,7 +139,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
             except Exception as e:
                 raise ValidationError(message=str(e), cursor_position=-1)
 
-    with Index(Path(index_path), store_fields=store_fields) as ix:
+    with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
         print(f"hyperbool {hyperbool.__version__}")
         print(f"loaded: {ix.index_path}")
         session = PromptSession()

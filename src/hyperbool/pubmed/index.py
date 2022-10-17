@@ -12,6 +12,9 @@ import lucene
 from lupyne import engine
 from tqdm.auto import tqdm
 
+from hyperbool.index.document import Document
+from hyperbool.index.index import Indexer
+
 assert lucene.getVMEnv() or lucene.initVM()
 
 DEFAULT_YEAR = 1900
@@ -19,9 +22,10 @@ DEFAULT_MONTH = 1
 DEFAULT_DAY = 1
 
 
-class PubmedArticle(object):
-    def __init__(self, id: str, date: datetime, title: str, abstract: str, publication_type: List[str],
-                 mesh_heading_list: List[str], mesh_qualifier_list: List[str], mesh_major_heading_list: List[str],
+class PubmedArticle(Document):
+    def __init__(self, id: str, date: datetime, title: str, abstract: str,
+                 publication_type: List[str], mesh_heading_list: List[str],
+                 mesh_qualifier_list: List[str], mesh_major_heading_list: List[str],
                  supplementary_concept_list: List[str], keyword_list: List[str], **optional_fields):
         super(PubmedArticle, self).__setattr__("fields", {
             "id": id,
@@ -35,43 +39,7 @@ class PubmedArticle(object):
             "supplementary_concept_list": supplementary_concept_list,
             "keyword_list": keyword_list
         })
-        for field_name, field_value in optional_fields.items():
-            self.set(field_name, field_value)
-
-    @staticmethod
-    def from_dict(data: dict):
-        data["date"] = datetime.utcfromtimestamp(data["date"])
-        return PubmedArticle(**data)
-
-    @staticmethod
-    def from_json(data: str):
-        return PubmedArticle.from_dict(json.loads(data))
-
-    def to_dict(self):
-        out = object.__getattribute__(self, "fields")
-        out["date"] = out["date"].timestamp()
-        return out
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
-
-    def set(self, key, value):
-        self.__setattr__(key, value)
-
-    def __repr__(self):
-        return self.to_json()
-
-    def keys(self):
-        return object.__getattribute__(self, "fields").keys()
-
-    def __getitem__(self, item):
-        return self.__getattr__(item)
-
-    def __getattr__(self, item):
-        return self.fields[item]
-
-    def __setattr__(self, key, value):
-        self.fields[key] = value
+        super().__init__(**optional_fields)
 
 
 _possible_days = {"1st": "1", "2nd": "2", "3rd": "3"}
@@ -371,106 +339,77 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
     )
 
 
-def set_index_fields(indexer: engine.Indexer, store_fields: bool = False, optional_fields: List[str] = None):
-    indexer.set("id", engine.Field.String, stored=True, docValuesType="sorted")  # PMID
-    indexer.set("date", engine.DateTimeField, stored=store_fields)  # Date that the PMID was actually published.
-    indexer.set("title", engine.Field.Text, stored=store_fields)
-    indexer.set("abstract", engine.Field.Text, stored=store_fields)
-    indexer.set("keyword_list", engine.Field.Text, stored=store_fields)
-    indexer.set("publication_type", engine.Field.String, stored=store_fields)
-    indexer.set("mesh_heading_list", engine.Field.String, stored=store_fields)
-    indexer.set("mesh_qualifier_list", engine.Field.String, stored=store_fields)
-    indexer.set("mesh_major_heading_list", engine.Field.String, stored=store_fields)
-    indexer.set("supplementary_concept_list", engine.Field.String, stored=store_fields)
-    if optional_fields is not None:
-        for optional_field_name in optional_fields:
-            indexer.set(optional_field_name, engine.Field.Text, stored=store_fields)
+class PubmedIndexer(Indexer):
+    def read_file(self, fname: Path) -> Iterable[Document]:
+        if str(fname).endswith(".gz"):
+            with gzip.open(fname, "rb") as f:
+                root = et.fromstring(f.read())
+        elif str(fname).endswith(".xml"):
+            tree = et.parse(fname)
+            root = tree.getroot()
+        else:
+            raise Exception("file type not supported by parser")
+        for pubmed_article in root.iter("PubmedArticle"):
+            yield parse_pubmed_article_node(pubmed_article)
 
+    def read_folder(self, folder: Path) -> Iterable[Document]:
+        valid_files = [f for f in os.listdir(str(folder)) if not f.startswith(".")]
+        for file in tqdm(valid_files, desc="folder progress", total=len(valid_files), position=0):
+            print(file)
+            for article in self.read_file(folder / file):
+                yield article
 
-def load_mem_index(store_fields: bool = False, optional_fields: List[str] = None) -> engine.Indexer:
-    indexer = engine.Indexer(directory=None)
-    set_index_fields(indexer, store_fields=store_fields, optional_fields=optional_fields)
-    return indexer
+    def read_jsonl(self, file: Path) -> Iterable[Document]:
+        with open(file, "r") as f:
+            for line in f:
+                yield PubmedArticle.from_json(line)
 
-
-def load_index(path: Path, store_fields: bool = False, optional_fields: List[str] = None) -> engine.Indexer:
-    indexer = engine.Indexer(directory=str(path))
-    set_index_fields(indexer, store_fields=store_fields, optional_fields=optional_fields)
-    return indexer
-
-
-def add_document(indexer: engine.IndexWriter, doc: PubmedArticle, optional_fields: Dict[str, Callable[[PubmedArticle], Any]] = None) -> None:
-    """Add a single document to the index."""
-    if doc.keyword_list is None or not all(doc.keyword_list):
-        doc.keyword_list = []
-    if doc.mesh_heading_list is None or not all(doc.mesh_heading_list):
-        doc.mesh_heading_list = []
-    if doc.mesh_major_heading_list is None or not all(doc.mesh_major_heading_list):
-        doc.mesh_heading_list = []
-    if doc.mesh_qualifier_list is None or not all(doc.mesh_qualifier_list):
-        doc.mesh_heading_list = []
-    if doc.supplementary_concept_list is None or not all(doc.supplementary_concept_list):
-        doc.supplementary_concept_list = []
-    if doc.publication_type is None or not all(doc.publication_type):
-        doc.publication_type = []
-    if optional_fields is not None:
-        for optional_field_name, optional_field_func in optional_fields.items():
-            doc.set(optional_field_name, optional_field_func(doc))
-    indexer.add(doc)
-
-
-def read_file(fname: Path) -> Iterable[PubmedArticle]:
-    if str(fname).endswith(".gz"):
-        with gzip.open(fname, "rb") as f:
-            root = et.fromstring(f.read())
-    elif str(fname).endswith(".xml"):
-        tree = et.parse(fname)
-        root = tree.getroot()
-    else:
-        raise Exception("file type not supported by parser")
-    for pubmed_article in root.iter("PubmedArticle"):
-        yield parse_pubmed_article_node(pubmed_article)
-
-
-def read_folder(folder: Path) -> Iterable[PubmedArticle]:
-    valid_files = [f for f in os.listdir(str(folder)) if not f.startswith(".")]
-    for file in tqdm(valid_files, desc="folder progress", total=len(valid_files), position=0):
-        print(file)
-        for article in read_file(folder / file):
-            yield article
-
-
-def read_jsonl(file: Path) -> Iterable[PubmedArticle]:
-    with open(file, "r") as f:
-        for line in f:
-            yield PubmedArticle.from_json(line)
-
-
-def bulk_index(indexer: engine.IndexWriter, docs: Iterable[PubmedArticle], total=None, optional_fields: Dict[str, Callable[[PubmedArticle], Any]] = None) -> None:
-    for i, doc in tqdm(enumerate(docs), desc="indexing progress", position=1, total=total):
-        add_document(indexer, doc, optional_fields)
-        if i % 100_000 == 0:
-            indexer.commit()
-    indexer.commit()
-
-
-class Index:
-    def __init__(self, index_path: Path, store_fields: bool = False, optional_fields: List[str] = None):
-        self.index_path = index_path
-        self.store_fields = store_fields
-        self.optional_fields = optional_fields
-        self.index: engine.Indexer
-
-    def bulk_index(self, baseline_path: Path, optional_fields: Dict[str, Callable[[PubmedArticle], Any]] = None):
-        assert isinstance(baseline_path, Path)
+    def parse_documents(self, baseline_path: Path) -> (Iterable[Document], int):
         total = None
         if baseline_path.is_dir():
-            articles = read_folder(baseline_path)
+            articles = self.read_folder(baseline_path)
         else:
             with open(baseline_path) as f:
                 total = sum(1 for _ in f)
-            articles = read_jsonl(baseline_path)
-        bulk_index(self.index, articles, total=total, optional_fields=optional_fields)
+            articles = self.read_jsonl(baseline_path)
+        return articles, total
+
+    def process_document(self, doc: Document) -> Document:
+        # Filter nulls.
+        doc.keyword_list = list(filter(None, doc.keyword_list))
+        doc.mesh_heading_list = list(filter(None, doc.mesh_heading_list))
+        doc.mesh_major_heading_list = list(filter(None, doc.mesh_major_heading_list))
+        doc.mesh_qualifier_list = list(filter(None, doc.mesh_qualifier_list))
+        doc.supplementary_concept_list = list(filter(None, doc.supplementary_concept_list))
+        doc.publication_type = list(filter(None, doc.publication_type))
+
+        # Ensure there are lists and not nulls.
+        if doc.keyword_list is None or not all(doc.keyword_list):
+            doc.keyword_list = []
+        if doc.mesh_heading_list is None or not all(doc.mesh_heading_list):
+            doc.mesh_heading_list = []
+        if doc.mesh_major_heading_list is None or not all(doc.mesh_major_heading_list):
+            doc.mesh_major_heading_list = []
+        if doc.mesh_qualifier_list is None or not all(doc.mesh_qualifier_list):
+            doc.mesh_qualifier_list = []
+        if doc.supplementary_concept_list is None or not all(doc.supplementary_concept_list):
+            doc.supplementary_concept_list = []
+        if doc.publication_type is None or not all(doc.publication_type):
+            doc.publication_type = []
+
+        return doc
+
+    def set_index_fields(self, store_fields: bool = False, optional_fields: List[str] = None):
+        self.index.set("id", engine.Field.String, stored=True, docValuesType="sorted")  # PMID
+        self.index.set("date", engine.DateTimeField, stored=store_fields)  # Date that the PMID was actually published.
+        self.index.set("title", engine.Field.Text, stored=store_fields)
+        self.index.set("abstract", engine.Field.Text, stored=store_fields)
+        self.index.set("keyword_list", engine.Field.Text, stored=store_fields)
+        self.index.set("publication_type", engine.Field.String, stored=store_fields)
+        self.index.set("mesh_heading_list", engine.Field.String, stored=store_fields)
+        self.index.set("mesh_qualifier_list", engine.Field.String, stored=store_fields)
+        self.index.set("mesh_major_heading_list", engine.Field.String, stored=store_fields)
+        self.index.set("supplementary_concept_list", engine.Field.String, stored=store_fields)
 
     def search(self, query: str, n_hits=10,
                hit_formatter: str = None):
@@ -501,13 +440,3 @@ class Index:
                 article = hit.dict()
                 print(hit_formatter.format(pmid=article["id"]))
         print("====================")
-
-    def retrieve(self, query: str):
-        return self.index.search(query, scores=False)
-
-    def __enter__(self):
-        self.index = load_index(self.index_path, store_fields=self.store_fields, optional_fields=self.optional_fields)
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.index.close()

@@ -1,46 +1,45 @@
 import hashlib
 import json
-import multiprocessing
 import uuid
+from abc import ABC
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 import ir_measures
-from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc, Qrel
-from lupyne import engine
-from tqdm.contrib.concurrent import process_map
+from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc
 from tqdm.auto import tqdm
+from tqdm.contrib.concurrent import process_map
 
 import hyperbool
 import hyperbool.pubmed.index as ix
 from hyperbool.experiments.collections import Collection, Topic
+from hyperbool.index.index import Indexer
 from hyperbool.query.parser import PubmedQueryParser, Q
 
 
-class LuceneSearcher:
-    def __init__(self, index_path: Path):
-        if isinstance(index_path, str):
-            index_path = Path(index_path)
-        self.index_path = index_path
+class LuceneSearcher(ABC):
+    def __init__(self, indexer: Indexer):
+        self.indexer = indexer
         self.index = None
 
     # The following two methods provide the `with [..] as [..]` syntax.
     def __enter__(self):
-        self.index = ix.load_index(self.index_path)
+        self.indexer.__enter__()
+        self.index = self.indexer.index
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.index.close()
+        self.indexer.__exit__(exc_type, exc_val, exc_tb)
         self.index = None
 
 
 class RetrievalExperiment(LuceneSearcher):
-    def __init__(self, index_path: Path, collection: Collection,
+    def __init__(self, indexer: Indexer, collection: Collection,
                  query_parser: PubmedQueryParser = PubmedQueryParser(),
                  eval_measures: List[Measure] = None,
                  run_path: Path = None, filter_topics: List[str] = None):
-        super().__init__(index_path)
+        super().__init__(indexer)
         # Some arguments have default values that need updating.
         if eval_measures is None:
             eval_measures = [Precision, Recall, SetF]
@@ -155,7 +154,7 @@ class RetrievalExperiment(LuceneSearcher):
 
     def __hash__(self):
         return hash(hyperbool.__version__ +
-                    str(self.index_path.absolute()) +
+                    str(self.indexer.index_path.absolute()) +
                     str(hash(self.collection)) +
                     str("".join(str(e) for e in self.eval_measures)))
 
@@ -169,12 +168,13 @@ class RetrievalExperiment(LuceneSearcher):
             "experiment.collection.identifier": self.collection.identifier,
             "experiment.collection.topics": len(self.collection.topics),
             "experiment.collection.hash": hashlib.sha256(bytes(str(hash(self.collection)), encoding="utf-8")).hexdigest(),
-            "index.path": str(self.index_path.absolute()),
+            "index.indexer": str(type(self.indexer)),
+            "index.path": str(self.indexer.index_path.absolute()),
         }
         return json.dumps(d)
 
 
-def AdHocExperiment(index_path: Path, raw_query: str,
+def AdHocExperiment(indexer: Indexer, raw_query: str,
                     query_parser: PubmedQueryParser = PubmedQueryParser(),
                     date_from="1900/01/01", date_to="3000/01/01") -> RetrievalExperiment:
     collection = Collection("adhoc", [Topic(identifier="0",
@@ -182,4 +182,4 @@ def AdHocExperiment(index_path: Path, raw_query: str,
                                             raw_query=raw_query,
                                             date_from=date_from,
                                             date_to=date_to)], [])
-    return RetrievalExperiment(index_path, collection, query_parser)
+    return RetrievalExperiment(indexer, collection, query_parser)
