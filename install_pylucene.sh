@@ -16,15 +16,16 @@ lucene_version=8.11.0
 ant_version=1.10.12
 
 # Download pylucene and ant.
-wget https://${mirror}.apache.org/lucene/pylucene/pylucene-${lucene_version}-src.tar.gz
+curl -O https://${mirror}.apache.org/lucene/pylucene/pylucene-${lucene_version}-src.tar.gz
 gunzip pylucene-${lucene_version}-src.tar.gz
 tar -xvf pylucene-${lucene_version}-src.tar
 mv pylucene-${lucene_version} pylucene
 rm pylucene-${lucene_version}-src.tar
 
-wget https://${mirror}.apache.org/ant/binaries/apache-ant-${ant_version}-bin.zip
-unzip apache-ant-${ant_version}-bin.zip
-rm apache-ant-${ant_version}-bin.zip
+curl -O https://${mirror}.apache.org/ant/binaries/apache-ant-${ant_version}-bin.tar.gz
+gunzip apache-ant-${ant_version}-bin.tar.gz
+tar -xvf apache-ant-${ant_version}-bin.tar
+rm apache-ant-${ant_version}-bin.tar
 mv apache-ant-${ant_version} ant
 export PATH="$PATH:$(pwd)/ant/bin"
 
