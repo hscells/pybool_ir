@@ -406,12 +406,17 @@ class PubmedQueryParser:
         try:
             expression.scan_string(raw_query, debug=True)
         except Exception as e:
+            print(raw_query)
             raise e
         return expression.parse_string(raw_query, parse_all=True)[0]
 
     def parse_lucene(self, raw_query: str) -> Q:
         # NOTE: converting the query to a string makes the date range queries fail. (?)
-        return self.node_to_lucene(self.parse(raw_query))  # .__str__()
+        try:
+            return self.node_to_lucene(self.parse(raw_query))  # .__str__()
+        except Exception as e:
+            print(raw_query)
+            raise e
 
     def node_to_lucene(self, node: ParseNode) -> Q:
         return node.__query__(tree=self.tree, optional_fields=self.optional_fields)

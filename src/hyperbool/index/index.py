@@ -13,6 +13,8 @@ assert lucene.getVMEnv() or lucene.initVM()
 
 class Indexer(ABC):
     def __init__(self, index_path: Path, store_fields: bool = False, optional_fields: List[str] = None):
+        if not isinstance(index_path, Path):
+            index_path = Path(index_path)
         self.index_path = index_path
         self.store_fields = store_fields
         self.optional_fields = optional_fields
@@ -40,7 +42,7 @@ class Indexer(ABC):
         """Return an iterable of documents from a path."""
 
     @abstractmethod
-    def set_index_fields(self, store_fields: bool = False, optional_fields: List[str] = None):
+    def set_index_fields(self, store_fields: bool = False):
         """Set fields of the index."""
 
     def bulk_index(self, fname: Path, optional_fields: Dict[str, Callable[[Document], Any]] = None):
@@ -62,8 +64,8 @@ class Indexer(ABC):
 
     def __enter__(self):
         self.index = engine.Indexer(directory=str(self.index_path))
-        self.set_index_fields(store_fields=self.store_fields, optional_fields=self.optional_fields)
         self._set_index_fields(self.optional_fields)
+        self.set_index_fields(store_fields=self.store_fields)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

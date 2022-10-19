@@ -1,7 +1,7 @@
 import hashlib
 import json
 import uuid
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import List
@@ -30,16 +30,17 @@ class LuceneSearcher(ABC):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.indexer.__exit__(exc_type, exc_val, exc_tb)
         self.index = None
+        self.indexer.__exit__(exc_type, exc_val, exc_tb)
 
 
 class RetrievalExperiment(LuceneSearcher):
     def __init__(self, indexer: Indexer, collection: Collection,
                  query_parser: PubmedQueryParser = PubmedQueryParser(),
                  eval_measures: List[Measure] = None,
-                 run_path: Path = None, filter_topics: List[str] = None):
+                 run_path: Path = None, filter_topics: List[str] = None, ignore_dates: bool = False):
         super().__init__(indexer)
+        self.ignore_dates = ignore_dates
         # Some arguments have default values that need updating.
         if eval_measures is None:
             eval_measures = [Precision, Recall, SetF]
@@ -69,7 +70,11 @@ class RetrievalExperiment(LuceneSearcher):
         filtered_topics = []
         filtered_qrels = []
 
-        parsed_queries = process_map(self._parse_queries_process, self.collection.topics, desc="query parsing")
+        parsed_queries = process_map(self._parse_queries_process, self.collection.topics, desc="query parsing", max_workers=1)
+        # parsed_queries = []
+        # for topic in self.collection.topics:
+        #     parsed_queries.append(self._parse_queries_process(topic))
+
         for topic, parsed_query in parsed_queries:
             self._parsed_queries.append(parsed_query)
             filtered_topics.append(topic)
@@ -84,6 +89,9 @@ class RetrievalExperiment(LuceneSearcher):
 
     @property
     def queries(self):
+        if self.ignore_dates:
+            return dict([(topic.identifier, self.query_parser.node_to_lucene(self._parsed_queries[i]))
+                         for i, topic in enumerate(self.collection.topics)])
         # Right at the last step, we can apply the date restrictions.
         return dict([(topic.identifier,
                       Q.all(
@@ -107,13 +115,13 @@ class RetrievalExperiment(LuceneSearcher):
     def doc(self, pmid: str):
         hits = self.index.search(f"id:{pmid}")
         for hit in hits:
-            article: ix.PubmedArticle = ix.PubmedArticle.from_dict(hit.dict("mesh_heading_list",
-                                                                            "mesh_qualifier_list",
-                                                                            "mesh_major_heading_list",
-                                                                            "keyword_list",
-                                                                            "publication_type",
-                                                                            "supplementary_concept_list"))
-            return article
+            # article: ix.PubmedArticle = ix.PubmedArticle.from_dict(hit.dict("mesh_heading_list",
+            #                                                                 "mesh_qualifier_list",
+            #                                                                 "mesh_major_heading_list",
+            #                                                                 "keyword_list",
+            #                                                                 "publication_type",
+            #                                                                 "supplementary_concept_list"))
+            return hit
         return None
 
     # This is what one would actually call to get the runs.
@@ -174,12 +182,14 @@ class RetrievalExperiment(LuceneSearcher):
         return json.dumps(d)
 
 
-def AdHocExperiment(indexer: Indexer, raw_query: str,
+def AdHocExperiment(indexer: Indexer, raw_query: str = None,
                     query_parser: PubmedQueryParser = PubmedQueryParser(),
-                    date_from="1900/01/01", date_to="3000/01/01") -> RetrievalExperiment:
-    collection = Collection("adhoc", [Topic(identifier="0",
-                                            description="ad-hoc topic",
-                                            raw_query=raw_query,
-                                            date_from=date_from,
-                                            date_to=date_to)], [])
-    return RetrievalExperiment(indexer, collection, query_parser)
+                    date_from="1900/01/01", date_to="3000/01/01", ignore_dates: bool = False) -> RetrievalExperiment:
+    collection = Collection("adhoc", [], [])
+    if raw_query is not None:
+        collection = Collection("adhoc", [Topic(identifier="0",
+                                                description="ad-hoc topic",
+                                                raw_query=raw_query,
+                                                date_from=date_from,
+                                                date_to=date_to)], [])
+    return RetrievalExperiment(indexer, collection, query_parser, ignore_dates=ignore_dates)

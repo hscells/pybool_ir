@@ -10,6 +10,7 @@ from xml.etree.ElementTree import Element
 
 import lucene
 from lupyne import engine
+from lupyne.engine.documents import Hit
 from tqdm.auto import tqdm
 
 from hyperbool.index.document import Document
@@ -23,12 +24,12 @@ DEFAULT_DAY = 1
 
 
 class PubmedArticle(Document):
-    def __init__(self, id: str, date: datetime, title: str, abstract: str,
+    def __init__(self, docid: str, date: datetime, title: str, abstract: str,
                  publication_type: List[str], mesh_heading_list: List[str],
                  mesh_qualifier_list: List[str], mesh_major_heading_list: List[str],
                  supplementary_concept_list: List[str], keyword_list: List[str], **optional_fields):
         super(PubmedArticle, self).__setattr__("fields", {
-            "id": id,
+            "id": docid,
             "date": date,
             "title": title,
             "abstract": abstract,
@@ -40,6 +41,18 @@ class PubmedArticle(Document):
             "keyword_list": keyword_list
         })
         super().__init__(**optional_fields)
+
+    @staticmethod
+    def from_hit(hit: Hit):
+        d = hit.dict("mesh_heading_list",
+                                                "mesh_qualifier_list",
+                                                "mesh_major_heading_list",
+                                                "keyword_list",
+                                                "publication_type",
+                                                "supplementary_concept_list")
+        del d["__id__"]
+        del d["__score__"]
+        return PubmedArticle.from_dict(d)
 
 
 _possible_days = {"1st": "1", "2nd": "2", "3rd": "3"}
@@ -375,6 +388,12 @@ class PubmedIndexer(Indexer):
         return articles, total
 
     def process_document(self, doc: Document) -> Document:
+        if doc.abstract is None:
+            doc.abstract = ""
+
+        if doc.title is None:
+            doc.title = ""
+
         # Filter nulls.
         doc.keyword_list = list(filter(None, doc.keyword_list))
         doc.mesh_heading_list = list(filter(None, doc.mesh_heading_list))

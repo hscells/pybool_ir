@@ -42,6 +42,12 @@ class Document(object):
     def keys(self):
         return object.__getattribute__(self, "fields").keys()
 
+    def has_key(self, key: str):
+        return key in self.keys()
+
+    def remove(self, key: str):
+        del self.fields[key]
+
     def __getitem__(self, item):
         return self.__getattr__(item)
 
