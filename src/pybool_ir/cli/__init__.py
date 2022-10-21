@@ -12,7 +12,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 @click.version_option(version=pybool_ir.__version__)
 def cli():
     """
-    hyperbool utilities.
+    pybool_ir utilities.
     """
 
 
@@ -140,7 +140,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
                 raise ValidationError(message=str(e), cursor_position=-1)
 
     with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
-        print(f"hyperbool {pybool_ir.__version__}")
+        print(f"pybool_ir {pybool_ir.__version__}")
         print(f"loaded: {ix.index_path}")
         session = PromptSession()
         while True:

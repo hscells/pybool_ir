@@ -168,7 +168,7 @@ class RetrievalExperiment(LuceneSearcher):
 
     def __repr__(self):
         d = {
-            "hyperbool.version": pybool_ir.__version__,
+            "pybool_ir.version": pybool_ir.__version__,
             "experiment.identifier": self._identifier,
             "experiment.hash": hashlib.sha256(bytes(str(hash(self)), encoding="utf-8")).hexdigest(),
             "experiment.creation": str(self.date_created),

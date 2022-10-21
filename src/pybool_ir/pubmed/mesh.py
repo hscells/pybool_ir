@@ -8,7 +8,7 @@ import lucene
 from pybool_ir import util
 from pybool_ir.pubmed.datautils import MESH_YEAR, MESH_URL
 
-DEFAULT_PATH = Path(appdirs.user_data_dir("hyperbool")) / "data/mesh"
+DEFAULT_PATH = Path(appdirs.user_data_dir("pybool_ir")) / "data/mesh"
 
 
 def analyze_mesh(heading: str) -> str:
