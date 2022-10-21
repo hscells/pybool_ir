@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Iterable, Dict, Callable, Any
+from typing import List, Iterable, Dict, Callable, Any, Union
 
 import lucene
 from lupyne import engine
@@ -12,9 +12,10 @@ assert lucene.getVMEnv() or lucene.initVM()
 
 
 class Indexer(ABC):
-    def __init__(self, index_path: Path, store_fields: bool = False, optional_fields: List[str] = None):
+    def __init__(self, index_path: Union[Path, str], store_fields: bool = True, optional_fields: List[str] = None):
         if not isinstance(index_path, Path):
             index_path = Path(index_path)
+        assert isinstance(index_path, Path)
         self.index_path = index_path
         self.store_fields = store_fields
         self.optional_fields = optional_fields
@@ -45,7 +46,9 @@ class Indexer(ABC):
     def set_index_fields(self, store_fields: bool = False):
         """Set fields of the index."""
 
-    def bulk_index(self, fname: Path, optional_fields: Dict[str, Callable[[Document], Any]] = None):
+    def bulk_index(self, fname: Union[Path, str], optional_fields: Dict[str, Callable[[Document], Any]] = None):
+        if not isinstance(fname, Path):
+            fname = Path(fname)
         assert isinstance(fname, Path)
         articles, total = self.parse_documents(fname)
         self._bulk_index(articles, total=total, optional_fields=optional_fields)

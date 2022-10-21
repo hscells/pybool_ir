@@ -353,7 +353,8 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
 
 
 class PubmedIndexer(Indexer):
-    def read_file(self, fname: Path) -> Iterable[Document]:
+    @staticmethod
+    def read_file(fname: Path) -> Iterable[Document]:
         if str(fname).endswith(".gz"):
             with gzip.open(fname, "rb") as f:
                 root = et.fromstring(f.read())
@@ -365,11 +366,12 @@ class PubmedIndexer(Indexer):
         for pubmed_article in root.iter("PubmedArticle"):
             yield parse_pubmed_article_node(pubmed_article)
 
-    def read_folder(self, folder: Path) -> Iterable[Document]:
+    @staticmethod
+    def read_folder(folder: Path) -> Iterable[Document]:
         valid_files = [f for f in os.listdir(str(folder)) if not f.startswith(".")]
         for file in tqdm(valid_files, desc="folder progress", total=len(valid_files), position=0):
             print(file)
-            for article in self.read_file(folder / file):
+            for article in PubmedIndexer.read_file(folder / file):
                 yield article
 
     def read_jsonl(self, file: Path) -> Iterable[Document]:
@@ -456,6 +458,6 @@ class PubmedIndexer(Indexer):
                                            publication_type=article.publication_type,
                                            mesh_major_heading_list=article.mesh_major_heading_list))
             else:
-                article = hit.dict()
-                print(hit_formatter.format(pmid=article["id"]))
+                article = PubmedArticle.from_dict(hit.dict())
+                print(hit_formatter.format(id=article.id))
         print("====================")

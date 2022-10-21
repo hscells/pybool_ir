@@ -19,7 +19,7 @@ For dependency and environment management, I've decided to use pipenv. Please re
 There is a bit of a barrier to entry at the moment in using this library. That is because many sub-packages, particularly the indexing and querying facilities, depend on the [pylucene](https://lucene.apache.org/pylucene/) library. Unfortunately there is some manual intervention that needs to be performed before you use `hyperbool`. I have tried to make this process as painless as possible, and it should work for mac and linux people. 
 
  1. Run `pipenv shell` to create a new environment in this directory.
- 2. Run the `install_pylucene.sh` script. This will attempt to download all the necessary files, move them to the correct spots, and then create the Python `.whl` file that contains the lucene python package (pylucene). It also installs this package into the pipenv environment (for local development). If you are using another environment manager you should install the `.whl` file that contains pylucene and then install the hyperbool package (e.g., using the `setup.py`).
+ 2. Run the `install_pylucene.sh` script. This will attempt to download all the necessary files, move them to the correct spots, and then create the Python `.whl` file that contains the lucene python package (pylucene). It also installs this package into the pipenv environment (for local development). If you are using another environment manager you should install the `.whl` file that contains pylucene and then install the hyperbool package (e.g., using the `setup.py`). If the installation with pipenv fails, then you need to edit the path to pylucene in the Pipfile.
  4. Activate your environment with `pipenv shell`. If this fails, then something has gone wrong. 
 
 ### Downloading and indexing Pubmed
@@ -39,13 +39,14 @@ Typical retrieval experiment. Note that there are many more arguments that one c
 ```python
 from hyperbool.experiments.collections import load_collection
 from hyperbool.experiments.retrieval import RetrievalExperiment
+from hyperbool.pubmed.index import PubmedIndexer
 from ir_measures import *
 import ir_measures
 
 # Automatically downloads, then loads this collection.
 collection = load_collection("ielab/sysrev-seed-collection")
 # Point the experiment to your index, your collection.
-with RetrievalExperiment(index_path="pubmed", collection=collection) as experiment:
+with RetrievalExperiment(PubmedIndexer(index_path="pubmed"), collection=collection) as experiment:
     # Get the run of the experiment.
     # This automatically executes the queries.
     run = experiment.run
@@ -57,8 +58,9 @@ It's also possible to do more ad hoc retrieval experiments.
 
 ```python
 from hyperbool.experiments.retrieval import AdHocExperiment
+from hyperbool.pubmed.index import PubmedIndexer
 
-with AdHocExperiment(index_path="pubmed", raw_query="headache[tiab]") as experiment:
+with AdHocExperiment(PubmedIndexer(index_path="pubmed"), raw_query="headache[tiab]") as experiment:
     print(experiment.count())
 ```
 
@@ -68,6 +70,6 @@ I am planning to have some more comprehensive documentation of all the packages 
 
 ## Roadmap
  
- - Get indexing and searching as close as possible to Pubmed.
+[x]Get indexing and searching as close as possible to Pubmed.
  - Build out the experiment package to provide stubs for experiments other than ad hoc retrieval (think: classification, seed driven document ranking, etc.).
  - Get and indexing pipeline for more collections, like PMC and Cochrane.

@@ -61,9 +61,9 @@ def pubmed_download(baseline_path: Path):
     help="location to write processed file"
 )
 def pubmed_process(baseline_path: Path, output_path: Path):
-    from hyperbool.pubmed.index import read_folder
+    from hyperbool.pubmed.index import PubmedIndexer
     with open(Path(output_path), "w") as f:
-        for article in tqdm(read_folder(Path(baseline_path)), desc="articles processed", position=1):
+        for article in tqdm(PubmedIndexer.read_folder(Path(baseline_path)), desc="articles processed", position=1):
             f.write(f"{article.to_json()}\n")
 
 
@@ -173,3 +173,6 @@ def csur_process(raw_path: Path, output_path: Path):
     with open(Path(output_path), "w") as f:
         for review in read_folder(Path(raw_path)):
             f.write(f"{review.to_json()}\n")
+
+
+
