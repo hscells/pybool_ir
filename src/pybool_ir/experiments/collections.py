@@ -17,6 +17,7 @@ __GITHASH_CLEFTAR = "8ce8a63bebb7d88f42dc1abad3e5744e315d07ae"
 __package_name = "pybool_ir"
 __base_dir = Path(appdirs.user_data_dir(__package_name))
 
+
 @dataclass_json
 @dataclass
 class Topic:
@@ -257,6 +258,8 @@ def __load_update_collection(name: str) -> Collection:
     pickle_collection = download_dir / "update_dataset.pkl"
     pickle_collection_zip = download_dir / "update_dataset.pkl.zip"
 
+    print(download_dir)
+
     if not download_dir.exists():
         os.makedirs(download_dir, exist_ok=True)
         util.download_file(collection_url, pickle_collection_zip)
@@ -264,16 +267,12 @@ def __load_update_collection(name: str) -> Collection:
         with zipfile.ZipFile(pickle_collection_zip, "r") as z:
             z.extractall(download_dir)
 
-        with open(pickle_collection, "rb") as f:
-            reviews = pickle.load(f)
+    with open(pickle_collection, "rb") as f:
+        reviews = pickle.load(f)
 
-        topics = []
-        for review in reviews:
-            print(review)
-            print(reviews[review])
-            topics.append(Topic(
+    # TODO When unpickling, there is a ModuleNotFoundError.
 
-            ))
+    raise Exception("Not yet implemented")
 
 
 __collection_load_methods = {
