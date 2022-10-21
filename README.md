@@ -1,4 +1,4 @@
-# *hyperbool*
+# pybool_ir
 
 This repository contains many related tools and libraries for the development of systematic review automation research, focusing on [Information Retrieval](https://en.wikipedia.org/wiki/Information_retrieval) methods. This library is broken into various packages to meet the needs of different research goals. Currently, the packages are organised as follows:
 
@@ -16,30 +16,30 @@ For dependency and environment management, I've decided to use pipenv. Please re
 
 ### pylucene
 
-There is a bit of a barrier to entry at the moment in using this library. That is because many sub-packages, particularly the indexing and querying facilities, depend on the [pylucene](https://lucene.apache.org/pylucene/) library. Unfortunately there is some manual intervention that needs to be performed before you use `hyperbool`. I have tried to make this process as painless as possible, and it should work for mac and linux people. 
+There is a bit of a barrier to entry at the moment in using this library. That is because many sub-packages, particularly the indexing and querying facilities, depend on the [pylucene](https://lucene.apache.org/pylucene/) library. Unfortunately there is some manual intervention that needs to be performed before you use `pybool_ir`. I have tried to make this process as painless as possible, and it should work for mac and linux people. 
 
  1. Run `pipenv shell` to create a new environment in this directory.
- 2. Run the `install_pylucene.sh` script. This will attempt to download all the necessary files, move them to the correct spots, and then create the Python `.whl` file that contains the lucene python package (pylucene). It also installs this package into the pipenv environment (for local development). If you are using another environment manager you should install the `.whl` file that contains pylucene and then install the hyperbool package (e.g., using the `setup.py`). If the installation with pipenv fails, then you need to edit the path to pylucene in the Pipfile.
+ 2. Run the `install_pylucene.sh` script. This will attempt to download all the necessary files, move them to the correct spots, and then create the Python `.whl` file that contains the lucene python package (pylucene). It also installs this package into the pipenv environment (for local development). If you are using another environment manager you should install the `.whl` file that contains pylucene and then install the pybool_ir package (e.g., using the `setup.py`). If the installation with pipenv fails, then you need to edit the path to pylucene in the Pipfile.
  4. Activate your environment with `pipenv shell`. If this fails, then something has gone wrong. 
 
 ### Downloading and indexing Pubmed
 
 Once you have activated the pipenv environment, a command will become available to handle downloading and indexing Pubmed data for you.
 
- 1. `hyperbool pubmed download -b PUBMED_PATH`
- 2. `hyperbool pubmed index -b PUBMED_PATH -i INDEX_PATH`
- 3. Once indexed, you can test to see if everything is working by running `hyperbool search-pubmed -i INDEX_PATH`
+ 1. `pybool_ir pubmed download -b PUBMED_PATH`
+ 2. `pybool_ir pubmed index -b PUBMED_PATH -i INDEX_PATH`
+ 3. Once indexed, you can test to see if everything is working by running `pybool_ir search-pubmed -i INDEX_PATH`
 
 **Note** Please see the full options for each of these commands using the `-h` parameter to find out how to perform additional actions, like indexing with stored fields.
 
 ### Retrieval experiments
 
-Typical retrieval experiment. Note that there are many more arguments that one can pass to the experiment to extend what the experiment does. 
+Typical retrieval experiment. Note that there are many more arguments that one can pass to the experiment to extend what the experiment does.
 
 ```python
-from hyperbool.experiments.collections import load_collection
-from hyperbool.experiments.retrieval import RetrievalExperiment
-from hyperbool.pubmed.index import PubmedIndexer
+from pybool_ir.experiments.collections import load_collection
+from pybool_ir.experiments.retrieval import RetrievalExperiment
+from pybool_ir.pubmed.index import PubmedIndexer
 from ir_measures import *
 import ir_measures
 
@@ -57,8 +57,8 @@ ir_measures.calc_aggregate([SetP, SetR, SetF], collection.qrels, run)
 It's also possible to do more ad hoc retrieval experiments.
 
 ```python
-from hyperbool.experiments.retrieval import AdHocExperiment
-from hyperbool.pubmed.index import PubmedIndexer
+from pybool_ir.experiments.retrieval import AdHocExperiment
+from pybool_ir.pubmed.index import PubmedIndexer
 
 with AdHocExperiment(PubmedIndexer(index_path="pubmed"), raw_query="headache[tiab]") as experiment:
     print(experiment.count())
@@ -66,7 +66,7 @@ with AdHocExperiment(PubmedIndexer(index_path="pubmed"), raw_query="headache[tia
 
 ## Documentation
 
-I am planning to have some more comprehensive documentation of all the packages in `hyperbool`. I still need to write the docstrings!
+I am planning to have some more comprehensive documentation of all the packages in `pybool_ir`. I still need to write the docstrings!
 
 ## Roadmap
  

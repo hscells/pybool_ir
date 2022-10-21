@@ -4,7 +4,7 @@ from typing import List
 
 import requests
 
-from hyperbool.util import ProgressFile
+from pybool_ir.util import ProgressFile
 
 FTP_URL = "ftp.ncbi.nlm.nih.gov"
 FTP_BASELINE_CWD = "/pubmed/baseline/"

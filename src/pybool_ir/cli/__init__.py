@@ -3,13 +3,13 @@ from pathlib import Path
 import click
 from tqdm.auto import tqdm
 
-import hyperbool
+import pybool_ir
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
-@click.version_option(version=hyperbool.__version__)
+@click.version_option(version=pybool_ir.__version__)
 def cli():
     """
     hyperbool utilities.
@@ -37,7 +37,7 @@ def csur():
     help="location to download Pubmed baseline"
 )
 def pubmed_download(baseline_path: Path):
-    from hyperbool.pubmed.baseline import download_baseline
+    from pybool_ir.pubmed.baseline import download_baseline
     download_baseline(Path(baseline_path))
 
 
@@ -61,7 +61,7 @@ def pubmed_download(baseline_path: Path):
     help="location to write processed file"
 )
 def pubmed_process(baseline_path: Path, output_path: Path):
-    from hyperbool.pubmed.index import PubmedIndexer
+    from pybool_ir.pubmed.index import PubmedIndexer
     with open(Path(output_path), "w") as f:
         for article in tqdm(PubmedIndexer.read_folder(Path(baseline_path)), desc="articles processed", position=1):
             f.write(f"{article.to_json()}\n")
@@ -97,7 +97,7 @@ def pubmed_process(baseline_path: Path, output_path: Path):
     help="whether to store fields or not"
 )
 def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
-    from hyperbool.pubmed.index import PubmedIndexer
+    from pybool_ir.pubmed.index import PubmedIndexer
     with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
         ix.bulk_index(Path(baseline_path))
 
@@ -123,8 +123,8 @@ def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
     help="whether to display stored fields or not"
 )
 def pubmed_search(index_path: Path, store_fields: bool):
-    from hyperbool.pubmed.index import PubmedIndexer
-    from hyperbool.query.parser import PubmedQueryParser
+    from pybool_ir.pubmed.index import PubmedIndexer
+    from pybool_ir.query.parser import PubmedQueryParser
     from prompt_toolkit import PromptSession
     from prompt_toolkit.validation import Validator
     from prompt_toolkit.validation import ValidationError
@@ -140,7 +140,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
                 raise ValidationError(message=str(e), cursor_position=-1)
 
     with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
-        print(f"hyperbool {hyperbool.__version__}")
+        print(f"hyperbool {pybool_ir.__version__}")
         print(f"loaded: {ix.index_path}")
         session = PromptSession()
         while True:
@@ -169,7 +169,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
     help="location to write processed file"
 )
 def csur_process(raw_path: Path, output_path: Path):
-    from hyperbool.csur.parser import read_folder
+    from pybool_ir.csur.parser import read_folder
     with open(Path(output_path), "w") as f:
         for review in read_folder(Path(raw_path)):
             f.write(f"{review.to_json()}\n")

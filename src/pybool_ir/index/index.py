@@ -6,7 +6,7 @@ from lupyne import engine
 from tqdm.auto import tqdm
 from abc import ABC, abstractmethod
 
-from hyperbool.index.document import Document
+from pybool_ir.index.document import Document
 
 assert lucene.getVMEnv() or lucene.initVM()
 

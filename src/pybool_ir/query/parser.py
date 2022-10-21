@@ -16,9 +16,9 @@ from pyparsing import (
     CaselessKeyword,
     ParserElement, Suppress, infix_notation, OpAssoc, Group, Literal, Combine, OneOrMore, nums, White, PrecededBy)
 
-from hyperbool.pubmed.mesh import MeSHTree
-from hyperbool.query import fields
-from hyperbool.query.ast import OperatorNode, AtomNode, ASTNode
+from pybool_ir.pubmed.mesh import MeSHTree
+from pybool_ir.query import fields
+from pybool_ir.query.ast import OperatorNode, AtomNode, ASTNode
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query

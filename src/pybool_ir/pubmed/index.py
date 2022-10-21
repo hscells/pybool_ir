@@ -13,8 +13,8 @@ from lupyne import engine
 from lupyne.engine.documents import Hit
 from tqdm.auto import tqdm
 
-from hyperbool.index.document import Document
-from hyperbool.index.index import Indexer
+from pybool_ir.index.document import Document
+from pybool_ir.index.index import Indexer
 
 assert lucene.getVMEnv() or lucene.initVM()
 

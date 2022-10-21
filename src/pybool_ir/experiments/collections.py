@@ -11,7 +11,7 @@ import ir_measures
 from dataclasses_json import dataclass_json
 from ir_measures import Qrel
 
-from hyperbool import util
+from pybool_ir import util
 
 __GITHASH_CLEFTAR = "8ce8a63bebb7d88f42dc1abad3e5744e315d07ae"
 
@@ -246,6 +246,35 @@ def __load_sysrev_seed(name: str) -> Collection:
     return Collection.from_dir(download_dir)
 
 
+def __load_update_collection(name: str) -> Collection:
+    import pickle
+    import zipfile
+
+    git_hash = "35a78b615d9c9dbdd889c55a61e5032b3cc309c6"
+    collection_url = f"https://github.com/Amal-Alharbi/Systematic_Reviews_Update/raw/{git_hash}/update_dataset.pkl.zip"
+    download_dir = Path(appdirs.user_data_dir("hyperbool")) / "collections" / name
+    pickle_collection = download_dir / "update_dataset.pkl"
+    pickle_collection_zip = download_dir / "update_dataset.pkl.zip"
+
+    if not download_dir.exists():
+        os.makedirs(download_dir, exist_ok=True)
+        util.download_file(collection_url, pickle_collection_zip)
+
+        with zipfile.ZipFile(pickle_collection_zip, "r") as z:
+            z.extractall(download_dir)
+
+        with open(pickle_collection, "rb") as f:
+            reviews = pickle.load(f)
+
+        topics = []
+        for review in reviews:
+            print(review)
+            print(reviews[review])
+            topics.append(Topic(
+
+            ))
+
+
 __collection_load_methods = {
     # -------------------------------------------------------------------------------------------
     # For the sysrev-seed collection, we can use all the queries.
@@ -255,12 +284,13 @@ __collection_load_methods = {
     "clef-tar/2017/training": __load_clef_tar_2017_training,
     "clef-tar/2017/testing": __load_clef_tar_2017_testing,
     "clef-tar/2018/training": __load_clef_tar_2018_training,
-    "clef-tar/2018/testing": __load_clef_tar_2018_testing
+    "clef-tar/2018/testing": __load_clef_tar_2018_testing,
     # -------------------------------------------------------------------------------------------
     # For CLEF TAR 2019, there are no additional topics that contain new Pubmed queries.
     # -------------------------------------------------------------------------------------------
     # Other possible datasets include:
     # - https://github.com/Amal-Alharbi/Systematic_Reviews_Update (but no Pubmed queries)
+    "amal-alharbi/systematic-reviews-update": __load_update_collection
     # - https://github.com/ielab/SIGIR2017-SysRev-Collection (only about a dozen Pubmed queries from 125 in total)
     # -------------------------------------------------------------------------------------------
 

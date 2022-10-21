@@ -5,8 +5,8 @@ from typing import List
 import appdirs
 import lucene
 
-from hyperbool import util
-from hyperbool.pubmed.datautils import MESH_YEAR, MESH_URL
+from pybool_ir import util
+from pybool_ir.pubmed.datautils import MESH_YEAR, MESH_URL
 
 DEFAULT_PATH = Path(appdirs.user_data_dir("hyperbool")) / "data/mesh"
 

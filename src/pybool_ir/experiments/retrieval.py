@@ -11,11 +11,11 @@ from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc
 from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 
-import hyperbool
-import hyperbool.pubmed.index as ix
-from hyperbool.experiments.collections import Collection, Topic
-from hyperbool.index.index import Indexer
-from hyperbool.query.parser import PubmedQueryParser, Q
+import pybool_ir
+import pybool_ir.pubmed.index as ix
+from pybool_ir.experiments.collections import Collection, Topic
+from pybool_ir.index.index import Indexer
+from pybool_ir.query.parser import PubmedQueryParser, Q
 
 
 class LuceneSearcher(ABC):
@@ -161,14 +161,14 @@ class RetrievalExperiment(LuceneSearcher):
         return ir_measures.iter_calc(self.eval_measures, self.collection.qrels, self.run)
 
     def __hash__(self):
-        return hash(hyperbool.__version__ +
+        return hash(pybool_ir.__version__ +
                     str(self.indexer.index_path.absolute()) +
                     str(hash(self.collection)) +
                     str("".join(str(e) for e in self.eval_measures)))
 
     def __repr__(self):
         d = {
-            "hyperbool.version": hyperbool.__version__,
+            "hyperbool.version": pybool_ir.__version__,
             "experiment.identifier": self._identifier,
             "experiment.hash": hashlib.sha256(bytes(str(hash(self)), encoding="utf-8")).hexdigest(),
             "experiment.creation": str(self.date_created),

@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-hyperbool = {editable = true, path = "."}
+pybool_ir = {editable = true, path = "."}
 jcc = {path = "./pylucene/jcc", editable = false}
 pyparsing = "*"
 pytest = "*"

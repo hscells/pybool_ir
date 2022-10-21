@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import List, Iterable
 
-from hyperbool.index.document import Document
-from hyperbool.index.index import Indexer
+from pybool_ir.index.document import Document
+from pybool_ir.index.index import Indexer
 
 import lucene
 from lupyne import engine
