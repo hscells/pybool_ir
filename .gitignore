@@ -1,3 +1,9 @@
+.DS_Store
+ant/
+pybool_ir.egg-info/
+
+.idea/
+
 .pytest_cache
 build
 hyperbool.egg-info

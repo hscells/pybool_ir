@@ -12,7 +12,7 @@ trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
 
 # Change these variables as needed.
 mirror=downloads
-lucene_version=8.11.0
+lucene_version=9.4.1
 ant_version=1.10.12
 
 # Download pylucene and ant.
@@ -33,17 +33,21 @@ export PATH="$PATH:$(pwd)/ant/bin"
 # https://lucene.apache.org/pylucene/jcc/install.html
 cd pylucene
 pushd jcc
+# Use the following line for M1/M2 Macs:
+# export JCC_INCLUDES=/opt/homebrew/Cellar/openjdk/19.0.1/libexec/openjdk.jdk/Contents/Home/include:/opt/homebrew/Cellar/openjdk/19.0.1/libexec/openjdk.jdk/Contents/Home/include/darwin:/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/include/python3.10
+# Also for M1/M2 Macs:
+# in setup.py, change: enable_shared = True
 python setup.py build
 python setup.py install
 popd
 
 # Install pylucene.
 # https://lucene.apache.org/pylucene/install.html
-ANT=$(which ant) PYTHON=$(which python) JCC="python -m jcc --shared --arch x86_64 --wheel" NUM_FILES=10 make
+# Might need `--arch x86_64`.
+ANT=$(which ant) PYTHON=$(which python) JCC="python -m jcc --shared --wheel" NUM_FILES=10 make
 
 # Clean up the files.
 cd ../
-pipenv lock
 pipenv install pylucene/dist/*.whl
-pipenv sync
+pipenv update
 true
