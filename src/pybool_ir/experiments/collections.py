@@ -13,9 +13,9 @@ from ir_measures import Qrel
 
 from pybool_ir import util
 
-__GITHASH_CLEFTAR = "8ce8a63bebb7d88f42dc1abad3e5744e315d07ae"
-__package_name = "pybool_ir"
-__base_dir = Path(appdirs.user_data_dir(__package_name))
+_GITHASH_CLEFTAR = "8ce8a63bebb7d88f42dc1abad3e5744e315d07ae"
+_package_name = "pybool_ir"
+_base_dir = Path(appdirs.user_data_dir(_package_name))
 
 
 @dataclass_json
@@ -52,7 +52,7 @@ class Collection:
             qrels = list(ir_measures.read_trec_qrels(f))
         topics = list(Topic.from_file(topics_path))
 
-        return Collection(str(collection_path).replace(str(__base_dir / "collections"), "")[1:], topics, qrels)
+        return Collection(str(collection_path).replace(str(_base_dir / "collections"), "")[1:], topics, qrels)
 
     def __hash__(self):
         return hash("".join([repr(topic) for topic in self.topics] +
@@ -101,7 +101,7 @@ def parse_clef_tar_topic(topic_str: str, date_from: str = "1940", date_to: str =
 
 def __load_clef_tar_2017_training(name: str) -> Collection:
     return __load_clef_tar(name=name,
-                           git_hash=__GITHASH_CLEFTAR,
+                           git_hash=_GITHASH_CLEFTAR,
                            year=2017,
                            subfolder="training",
                            qrels_path="qrels/train.abs.qrels",
@@ -113,7 +113,7 @@ def __load_clef_tar_2017_training(name: str) -> Collection:
 
 def __load_clef_tar_2017_testing(name: str) -> Collection:
     return __load_clef_tar(name=name,
-                           git_hash=__GITHASH_CLEFTAR,
+                           git_hash=_GITHASH_CLEFTAR,
                            year=2017,
                            subfolder="testing",
                            qrels_path="qrels/qrel_abs_test.txt",
@@ -126,7 +126,7 @@ def __load_clef_tar_2017_testing(name: str) -> Collection:
 
 def __load_clef_tar_2018_training(name: str) -> Collection:
     return __load_clef_tar(name=name,
-                           git_hash=__GITHASH_CLEFTAR,
+                           git_hash=_GITHASH_CLEFTAR,
                            year=2018,
                            subfolder="Task2/Training/",
                            qrels_path="qrels/full.train.abs.2018.qrels",
@@ -143,7 +143,7 @@ def __load_clef_tar_2018_training(name: str) -> Collection:
 
 def __load_clef_tar_2018_testing(name: str) -> Collection:
     return __load_clef_tar(name=name,
-                           git_hash=__GITHASH_CLEFTAR,
+                           git_hash=_GITHASH_CLEFTAR,
                            year=2018,
                            subfolder="Task2/Testing/",
                            qrels_path="qrels/full.test.abs.2018.qrels",
@@ -164,7 +164,7 @@ def __load_clef_tar(name: str, git_hash: str, year: int, subfolder: str,
     collection_url = f"https://raw.githubusercontent.com/CLEF-TAR/tar/{git_hash}/{year}-TAR/{subfolder}/"
     qrels_url = collection_url + qrels_path
 
-    download_dir = __base_dir / "collections" / name
+    download_dir = _base_dir / "collections" / name
     raw_collection = download_dir / "raw"
     topic_file = download_dir / "topics.jsonl"
     qrels_file = download_dir / "qrels"
@@ -206,7 +206,7 @@ def __load_clef_tar(name: str, git_hash: str, year: int, subfolder: str,
 def __load_sysrev_seed(name: str) -> Collection:
     git_hash = "84d116a1ed2dae191cce64daff7f968323860c53"
     collection_url = f"https://github.com/ielab/sysrev-seed-collection/raw/{git_hash}/collection_data/overall_collection.jsonl"
-    download_dir = __base_dir / "collections" / name
+    download_dir = _base_dir / "collections" / name
     raw_collection = download_dir / "raw.jsonl"
     topic_file = download_dir / "topics.jsonl"
     qrels_file = download_dir / "qrels"
@@ -254,7 +254,7 @@ def __load_update_collection(name: str) -> Collection:
 
     git_hash = "35a78b615d9c9dbdd889c55a61e5032b3cc309c6"
     collection_url = f"https://github.com/Amal-Alharbi/Systematic_Reviews_Update/raw/{git_hash}/update_dataset.pkl.zip"
-    download_dir = __base_dir / "collections" / name
+    download_dir = _base_dir / "collections" / name
     pickle_collection = download_dir / "update_dataset.pkl"
     pickle_collection_zip = download_dir / "update_dataset.pkl.zip"
 

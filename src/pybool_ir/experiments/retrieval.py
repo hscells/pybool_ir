@@ -1,10 +1,10 @@
 import hashlib
 import json
 import uuid
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 import ir_measures
 from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc
@@ -12,10 +12,11 @@ from tqdm.auto import tqdm
 from tqdm.contrib.concurrent import process_map
 
 import pybool_ir
-import pybool_ir.pubmed.index as ix
 from pybool_ir.experiments.collections import Collection, Topic
 from pybool_ir.index.index import Indexer
-from pybool_ir.query.parser import PubmedQueryParser, Q
+from pybool_ir.query.ast import AtomNode
+from pybool_ir.query.parser import QueryParser
+from pybool_ir.query.pubmed.parser import PubmedQueryParser, Q
 
 
 class LuceneSearcher(ABC):
@@ -36,11 +37,13 @@ class LuceneSearcher(ABC):
 
 class RetrievalExperiment(LuceneSearcher):
     def __init__(self, indexer: Indexer, collection: Collection,
-                 query_parser: PubmedQueryParser = PubmedQueryParser(),
+                 query_parser: QueryParser = PubmedQueryParser(),
                  eval_measures: List[Measure] = None,
-                 run_path: Path = None, filter_topics: List[str] = None, ignore_dates: bool = False):
+                 run_path: Path = None, filter_topics: List[str] = None,
+                 ignore_dates: bool = False, date_field: str = "dp"):
         super().__init__(indexer)
         self.ignore_dates = ignore_dates
+        self.date_field = date_field
         # Some arguments have default values that need updating.
         if eval_measures is None:
             eval_measures = [Precision, Recall, SetF]
@@ -70,10 +73,10 @@ class RetrievalExperiment(LuceneSearcher):
         filtered_topics = []
         filtered_qrels = []
 
-        parsed_queries = process_map(self._parse_queries_process, self.collection.topics, desc="query parsing", max_workers=1)
-        # parsed_queries = []
-        # for topic in self.collection.topics:
-        #     parsed_queries.append(self._parse_queries_process(topic))
+        # parsed_queries = process_map(self._parse_queries_process, self.collection.topics, desc="query parsing", max_workers=1)
+        parsed_queries = []
+        for topic in tqdm(self.collection.topics, desc="parsing queries"):
+            parsed_queries.append(self._parse_queries_process(topic))
 
         for topic, parsed_query in parsed_queries:
             self._parsed_queries.append(parsed_query)
@@ -84,19 +87,19 @@ class RetrievalExperiment(LuceneSearcher):
 
     def _parse_queries_process(self, t: Topic):
         if len(t.raw_query) > 0:
-            return t, self.query_parser.parse(t.raw_query)
+            return t, self.query_parser.parse_lucene(t.raw_query)
         return None, None
 
     @property
-    def queries(self):
+    def queries(self) -> Dict[str, Q]:
         if self.ignore_dates:
-            return dict([(topic.identifier, self.query_parser.node_to_lucene(self._parsed_queries[i]))
+            return dict([(topic.identifier, self._parsed_queries[i])
                          for i, topic in enumerate(self.collection.topics)])
         # Right at the last step, we can apply the date restrictions.
         return dict([(topic.identifier,
                       Q.all(
-                          *[self.query_parser.node_to_lucene(self._parsed_queries[i])] +
-                           [self.query_parser.parse_lucene(f"{topic.date_from}:{topic.date_to}[dp]")]
+                          *[self._parsed_queries[i]] +
+                           [self.query_parser.transform(AtomNode(f"{topic.date_from}:{topic.date_to}", [self.date_field]))]
                       )) for i, topic in enumerate(self.collection.topics)])
 
     def count(self) -> List[int]:
@@ -104,7 +107,7 @@ class RetrievalExperiment(LuceneSearcher):
             yield self.index.count(lucene_query)
 
     # This private method runs the retrieval.
-    def __retrieval(self) -> List[ScoredDoc]:
+    def _retrieval(self) -> List[ScoredDoc]:
         for query_id, lucene_query in tqdm(self.queries.items(), desc="retrieval"):
             # Documents can remain un-scored for efficiency (?).
             hits = self.index.search(lucene_query, scored=False)
@@ -133,7 +136,7 @@ class RetrievalExperiment(LuceneSearcher):
 
         # If the experimenter doesn't want to write a run file, just return the results.
         if self.run_path is None:
-            self._run = list(self.__retrieval())
+            self._run = list(self._retrieval())
             return self._run
 
         # Otherwise, we can just iteratively write results as they come to the run file.
@@ -141,7 +144,7 @@ class RetrievalExperiment(LuceneSearcher):
         with open(self.run_path, "w") as f:
             # This trick using setdefault below comes from the ir_measures library.
             ranks = {}
-            for scored_doc in self.__retrieval():
+            for scored_doc in self._retrieval():
                 # Pretty neat way to keep track of topics!
                 key = scored_doc.query_id
                 rank = ranks.setdefault(key, 0)
@@ -183,8 +186,8 @@ class RetrievalExperiment(LuceneSearcher):
 
 
 def AdHocExperiment(indexer: Indexer, raw_query: str = None,
-                    query_parser: PubmedQueryParser = PubmedQueryParser(),
-                    date_from="1900/01/01", date_to="3000/01/01", ignore_dates: bool = False) -> RetrievalExperiment:
+                    query_parser: QueryParser = PubmedQueryParser(),
+                    date_from="1900/01/01", date_to="3000/01/01", ignore_dates: bool = False, date_field: str = "dp") -> RetrievalExperiment:
     collection = Collection("adhoc", [], [])
     if raw_query is not None:
         collection = Collection("adhoc", [Topic(identifier="0",
@@ -192,4 +195,4 @@ def AdHocExperiment(indexer: Indexer, raw_query: str = None,
                                                 raw_query=raw_query,
                                                 date_from=date_from,
                                                 date_to=date_to)], [])
-    return RetrievalExperiment(indexer, collection, query_parser, ignore_dates=ignore_dates)
+    return RetrievalExperiment(indexer, collection, query_parser, ignore_dates=ignore_dates, date_field=date_field)

@@ -12,7 +12,7 @@ class OperatorNode(ASTNode):
     children: List[ASTNode]
 
     def __repr__(self):
-        return f"({f' {self.operator} '.join([str(x) for x in self.children])})"
+        return f"({f' {self.operator.upper()} '.join([str(x) for x in self.children])})"
 
 
 @dataclass

@@ -124,7 +124,7 @@ def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
 )
 def pubmed_search(index_path: Path, store_fields: bool):
     from pybool_ir.pubmed.index import PubmedIndexer
-    from pybool_ir.query.parser import PubmedQueryParser
+    from pybool_ir.query.pubmed.parser import PubmedQueryParser
     from prompt_toolkit import PromptSession
     from prompt_toolkit.validation import Validator
     from prompt_toolkit.validation import ValidationError

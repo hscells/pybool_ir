@@ -1,4 +1,4 @@
-from pybool_ir.query.parser import expression
+from pybool_ir.query.pubmed.parser import expression
 
 
 def test_basic():
