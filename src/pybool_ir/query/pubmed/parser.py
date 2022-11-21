@@ -312,6 +312,8 @@ class FieldUnit:
         return cls(parts) if len(parts) > 0 else cls([s])
 
     def __repr__(self):
+        if self.field_op is not None:
+            return f"{self.field}:{self.field_op}"
         return f"{self.field}"
 
     def lucene_fields(self):

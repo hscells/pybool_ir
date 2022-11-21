@@ -85,6 +85,11 @@ class RetrievalExperiment(LuceneSearcher):
 
         self.collection = Collection(collection.identifier, filtered_topics, filtered_qrels)
 
+        self.load()
+
+    def load(self):
+        pass
+
     def _parse_queries_process(self, t: Topic):
         if len(t.raw_query) > 0:
             return t, self.query_parser.parse_lucene(t.raw_query)

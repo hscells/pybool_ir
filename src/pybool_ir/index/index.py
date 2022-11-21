@@ -66,7 +66,7 @@ class Indexer(ABC):
                 self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields)
 
     def __enter__(self):
-        self.index = engine.Indexer(directory=str(self.index_path))
+        self.index = engine.Indexer(directory=str(self.index_path), nrt=True, )
         self._set_index_fields(self.optional_fields)
         self.set_index_fields(store_fields=self.store_fields)
         return self
