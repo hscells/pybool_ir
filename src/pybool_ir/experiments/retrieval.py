@@ -79,12 +79,12 @@ class RetrievalExperiment(LuceneSearcher):
             parsed_queries.append(self._parse_queries_process(topic))
 
         for topic, parsed_query in parsed_queries:
+            if topic is None:
+                continue
             self._parsed_queries.append(parsed_query)
             filtered_topics.append(topic)
             filtered_qrels += [x for x in collection.qrels if x.query_id == topic.identifier]
-
         self.collection = Collection(collection.identifier, filtered_topics, filtered_qrels)
-
         self.load()
 
     def load(self):
