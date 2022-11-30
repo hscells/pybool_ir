@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,7 @@ from dataclasses_json import dataclass_json
 from ir_measures import Qrel
 
 from pybool_ir import util
+from pybool_ir.query import ovid
 
 _GITHASH_CLEFTAR = "8ce8a63bebb7d88f42dc1abad3e5744e315d07ae"
 _package_name = "pybool_ir"
@@ -73,7 +75,7 @@ def parse_clef_tar_topic(topic_str: str, date_from: str = "1940", date_to: str =
             if len(line) == 0:
                 parsing_query = False
                 continue
-            topic_query += line
+            topic_query += line + "\n"
         if line.startswith("Topic:"):
             topic_id = line.replace("Topic: ", "")
         if line.startswith("Title:"):
@@ -203,6 +205,72 @@ def __load_clef_tar(name: str, git_hash: str, year: int, subfolder: str,
     return Collection.from_dir(download_dir)
 
 
+def __load_shuai(name: str, year: int) -> Collection:
+    git_hash = "7a23a14ced14021f4db910f83330426b07ce3e5c"
+    collection_url = f"https://raw.githubusercontent.com/ielab/meshsuggest/{git_hash}/queries_new/original_full_query/{year}/testing/"
+
+    download_dir = _base_dir / "collections" / name
+    tar_download_dir = _base_dir / "collections" / "clef-tar" / str(year) / "testing"
+    tar_qrels = tar_download_dir / "qrels"
+    tar_topics = tar_download_dir / "topics.jsonl"
+    tar_raw = tar_download_dir / "raw"
+    raw_collection = download_dir / "raw"
+    topic_file = download_dir / "topics.jsonl"
+    qrels_file = download_dir / "qrels"
+
+    if not download_dir.exists():
+        os.makedirs(download_dir, exist_ok=True)
+        os.makedirs(raw_collection, exist_ok=True)
+        shutil.copyfile(tar_qrels, qrels_file)
+
+        with open(tar_topics, "r") as tar_f:
+            with open(topic_file, "w") as shuai_f:
+                for line in tar_f:
+                    topic = Topic.from_json(line)
+
+                    util.download_file(f"{collection_url}{topic.identifier}", raw_collection / topic.identifier)
+                    with open(raw_collection / topic.identifier, "r") as g:
+                        query = g.read()
+                        if query == "404: Not Found":
+                            if len(topic.raw_query) > 0:
+                                query = topic.raw_query
+                            else:
+                                for raw_file in os.listdir(tar_raw):
+                                    with open(tar_raw / str(raw_file), "r") as raw_f:
+                                        if topic.identifier in raw_f.read():
+                                            mapped_id = str(raw_file)
+                                with open(tar_raw / mapped_id, "r") as topic_f:
+                                    topic_q = parse_clef_tar_topic(topic_f.read(), parse_query=True)
+                                    query = ovid.transform(topic_q.raw_query)
+
+                        query = query.replace("""tomography[MeSH Terms] tomography, optical coherence[MeSH Terms]""",
+                                              """tomography[MeSH Terms] OR tomography, optical coherence[MeSH Terms]""")
+                        query = query.replace(""""Diagnostic and Statistical Manual of Mental Disorders[MeSH Terms]""",
+                                              """"Diagnostic and Statistical Manual of Mental Disorders"[MeSH Terms]""")
+
+                        shuai_f.write(Topic(identifier=topic.identifier,
+                                            description=topic.description,
+                                            date_from=topic.date_from,
+                                            date_to=topic.date_to,
+                                            raw_query=query).to_json() + "\n")
+    return Collection.from_dir(download_dir)
+
+
+def __load_shuai_clef_tar_2017_testing(name: str):
+    __load_clef_tar_2017_testing("clef-tar/2017/testing")
+    return __load_shuai(name, 2017)
+
+
+def __load_shuai_clef_tar_2018_testing(name: str):
+    __load_clef_tar_2017_testing("clef-tar/2018/testing")
+    return __load_shuai(name, 2018)
+
+
+def __load_shuai_clef_tar_2019_testing(name: str):
+    __load_clef_tar_2017_testing("clef-tar/2019/testing")
+    return __load_shuai(name, 2019)
+
+
 def __load_sysrev_seed(name: str) -> Collection:
     git_hash = "84d116a1ed2dae191cce64daff7f968323860c53"
     collection_url = f"https://github.com/ielab/sysrev-seed-collection/raw/{git_hash}/collection_data/overall_collection.jsonl"
@@ -285,6 +353,12 @@ __collection_load_methods = {
     "clef-tar/2017/testing": __load_clef_tar_2017_testing,
     "clef-tar/2018/training": __load_clef_tar_2018_training,
     "clef-tar/2018/testing": __load_clef_tar_2018_testing,
+    # -------------------------------------------------------------------------------------------
+    # For some work on MeSH Term suggestion, the CLEF TAR queries have been translated to Pubmed.
+    # NOTE: Only testing queries have been translated.
+    "shuai/clef-tar/2017/testing": __load_shuai_clef_tar_2017_testing,
+    "shuai/clef-tar/2018/testing": __load_shuai_clef_tar_2018_testing,
+    "shuai/clef-tar/2019/testing": __load_shuai_clef_tar_2019_testing,
     # -------------------------------------------------------------------------------------------
     # For CLEF TAR 2019, there are no additional topics that contain new Pubmed queries.
     # -------------------------------------------------------------------------------------------
