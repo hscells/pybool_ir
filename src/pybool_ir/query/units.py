@@ -5,9 +5,11 @@ from lupyne import engine
 # noinspection PyUnresolvedReferences
 from org.apache.lucene import search
 
+from pybool_ir.query.parser import MAX_CLAUSES
+
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
-search.BooleanQuery.setMaxClauseCount(4096)  # There is apparently a cap for efficiency reasons.
+search.BooleanQuery.setMaxClauseCount(MAX_CLAUSES)  # There is apparently a cap for efficiency reasons.
 analyzer = engine.analyzers.Analyzer.standard()
 
 
@@ -19,7 +21,10 @@ class UnitAtom(object):
 
     @property
     def analyzed_query(self) -> str:
-        return analyzer.parse(self.query).__str__()
+        # Although possible for query languages to include such characters inside queries,
+        # these appear to be special Lucene characters, and so must be replaced prior to analysis.
+        query = self.query.replace("[", " ").replace("]", " ").replace("/", " ")
+        return analyzer.parse(query).__str__()
 
     @property
     @abstractmethod

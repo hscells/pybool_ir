@@ -3,7 +3,9 @@ from abc import ABC, abstractmethod
 import lucene
 from lupyne import engine
 
-from pybool_ir.query import ASTNode
+from pybool_ir.query.ast import ASTNode
+
+MAX_CLAUSES = 60_000
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query

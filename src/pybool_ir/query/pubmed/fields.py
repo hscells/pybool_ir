@@ -5,7 +5,7 @@ mapping = {
     # TODO: At the moment, the fields must be arrays, since
     #       the title and the abstract are separate fields.
     "All Fields": ["all_fields"],
-    "tw": ["all_fields"],
+    "all": ["all_fields"], # Might be unofficial?
     "Title/Abstract": ["title", "abstract"],
     "tiab": ["title", "abstract"],
     "Title": ["title"],
@@ -49,4 +49,8 @@ mapping = {
     # TODO: No mapping yet. Empty list means the
     #       term is not included in the query.
     "jour": ["publication_type"],
+
+    # TODO: Not sure if this is necessarily correct.
+    "tw": ["all_fields"],
+    "Text Word": ["all_fields"]
 }

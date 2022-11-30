@@ -18,6 +18,7 @@ from pyparsing import (
     ParserElement, Suppress, infix_notation, OpAssoc, Group, Literal, Combine, OneOrMore, nums, White, PrecededBy)
 
 from pybool_ir.pubmed.mesh import MeSHTree
+from pybool_ir.query.parser import MAX_CLAUSES
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.ast import OperatorNode, AtomNode, ASTNode
 from pybool_ir.query.pubmed import fields
@@ -25,7 +26,7 @@ from pybool_ir.query.units import UnitAtom, QueryAtom
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
-search.BooleanQuery.setMaxClauseCount(4096)  # There is apparently a cap for efficiency reasons.
+search.BooleanQuery.setMaxClauseCount(MAX_CLAUSES)  # There is apparently a cap for efficiency reasons.
 analyzer = engine.analyzers.Analyzer.standard()
 
 
@@ -313,7 +314,7 @@ class FieldUnit:
 
     def __repr__(self):
         if self.field_op is not None:
-            return f"{self.field}:{self.field_op}"
+            return f"{self.field}{self.field_op}"
         return f"{self.field}"
 
     def lucene_fields(self):
@@ -334,8 +335,9 @@ AND, OR, NOT = map(
 )
 
 # Atoms.
-valid_chars = "α-–_,'’&*?"
-valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars + " ") ^ Literal("*")))
+valid_chars = "αβ-–_,'’&*?."
+valid_quote_chars = valid_chars + "[]/"
+valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_quote_chars + " ") ^ Literal("*")))
 valid_quoteless_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars) ^ Literal("*")))
 
 phrase = Combine(Literal('"') + valid_phrase + Literal('"')).set_parse_action(QueryAtom)
