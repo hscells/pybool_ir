@@ -8,8 +8,7 @@ from typing import List, Dict
 
 import ir_measures
 from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc
-from tqdm.auto import tqdm
-from tqdm.contrib.concurrent import process_map
+from tqdm import tqdm
 
 import pybool_ir
 from pybool_ir.experiments.collections import Collection, Topic
@@ -104,7 +103,7 @@ class RetrievalExperiment(LuceneSearcher):
         return dict([(topic.identifier,
                       Q.all(
                           *[self._parsed_queries[i]] +
-                           [self.query_parser.transform(AtomNode(f"{topic.date_from}:{topic.date_to}", [self.date_field]))]
+                           [self.query_parser.transform(AtomNode(f"{topic.date_from}:{topic.date_to}", self.date_field))]
                       )) for i, topic in enumerate(self.collection.topics)])
 
     def count(self) -> List[int]:

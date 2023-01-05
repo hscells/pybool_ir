@@ -322,54 +322,63 @@ class FieldUnit:
 
 
 default_field = FieldUnit(["All Fields"])
+
+
 # --------------------------------------
-
-# Makes parsing faster. (?)
-ParserElement.enablePackrat()
-
-expression = Forward()
-
-# Boolean operators.
-AND, OR, NOT = map(
-    CaselessKeyword, "AND OR NOT".split()
-)
-
-# Atoms.
-valid_chars = "αβ-–_,'’&*?."
-valid_quote_chars = valid_chars + "[]/"
-valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_quote_chars + " ") ^ Literal("*")))
-valid_quoteless_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars) ^ Literal("*")))
-
-phrase = Combine(Literal('"') + valid_phrase + Literal('"')).set_parse_action(QueryAtom)
-quoteless_phrase = (Combine(OneOrMore(valid_quoteless_phrase | White(" ", max=1) + ~(White() | AND | OR | NOT)))).set_parse_action(QueryAtom)
-mesh_and_qualifier = (Suppress(Optional(Literal('"'))) + (Word(alphanums + valid_chars + " ") + Suppress(Literal("/")) + Word(alphanums + valid_chars + " ")) + Suppress(Optional(Literal('"')))).set_parse_action(MeSHAndQualifierAtom)
-date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(DateAtom)
-date_range = (date + Suppress(":") + date).set_parse_action(DateRangeAtom)
-
-# Fields.
-field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(FieldUnit)
-
-# Atom + Fields.
-atom = Group((mesh_and_qualifier + field_restriction) | ((date_range | date | quoteless_phrase | phrase) + Optional(field_restriction))).set_parse_action(Atom)
-
-# Final expression.
-expression << infix_notation(atom, [(NOT, 2, OpAssoc.RIGHT, NotOp), (OR, 2, OpAssoc.LEFT, BinOp), (AND, 2, OpAssoc.LEFT, BinOp)])
 
 
 class PubmedQueryParser(QueryParser):
-    def __init__(self, tree: MeSHTree = MeSHTree(), optional_fields: List[str] = None):
+    def __init__(self, tree: MeSHTree = MeSHTree(), optional_fields: List[str] = None, optional_operators: List[str] = None):
         self.tree = tree
         self.optional_fields = optional_fields
+        self.optional_operators = optional_operators
 
-    @staticmethod
-    def parse(raw_query: str) -> ParseNode:
+    def parse(self, raw_query: str) -> ParseNode:
+        # Makes parsing faster. (?)
+        ParserElement.enablePackrat()
+
+        expression = Forward()
+
+        # Boolean operators.
+        AND, OR, NOT = map(
+            CaselessKeyword, "AND OR NOT".split()
+        )
+
+        # Atoms.
+        valid_chars = "αβ-–_,'’&*?."
+        valid_quote_chars = valid_chars + "[]/"
+        valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_quote_chars + " ") ^ Literal("*")))
+        valid_quoteless_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + valid_chars) ^ Literal("*")))
+
+        phrase = Combine(Literal('"') + valid_phrase + Literal('"')).set_parse_action(QueryAtom)
+        quoteless_phrase = (Combine(OneOrMore(valid_quoteless_phrase | White(" ", max=1) + ~(White() | AND | OR | NOT)))).set_parse_action(QueryAtom)
+        mesh_and_qualifier = (Suppress(Optional(Literal('"'))) + (Word(alphanums + valid_chars + " ") + Suppress(Literal("/")) + Word(alphanums + valid_chars + " ")) + Suppress(Optional(Literal('"')))).set_parse_action(MeSHAndQualifierAtom)
+        date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(DateAtom)
+        date_range = (date + Suppress(":") + date).set_parse_action(DateRangeAtom)
+
+        # Fields.
+        field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(FieldUnit)
+
+        # Atom + Fields.
+        atom = Group((mesh_and_qualifier + field_restriction) | ((date_range | date | quoteless_phrase | phrase) + Optional(field_restriction))).set_parse_action(Atom)
+
+        # Final expression.
+        optional_operators = []
+        if self.optional_operators is not None:
+            optional_operators = [(CaselessKeyword(op), 2, OpAssoc.LEFT, BinOp) for op in self.optional_operators]
+        expression << infix_notation(atom, [(NOT, 2, OpAssoc.RIGHT, NotOp), (OR, 2, OpAssoc.LEFT, BinOp), (AND, 2, OpAssoc.LEFT, BinOp)] + optional_operators)
+
         raw_query = raw_query.replace(":NoExp", ":noexp")
         try:
             expression.scan_string(raw_query, debug=True)
         except Exception as e:
             print(raw_query)
             raise e
-        return expression.parse_string(raw_query, parse_all=True)[0]
+        try:
+            return expression.parse_string(raw_query, parse_all=True)[0]
+        except Exception as e:
+            print(raw_query)
+            raise e
 
     def parse_lucene(self, raw_query: str) -> Q:
         # NOTE: converting the query to a string makes the date range queries fail. (?)

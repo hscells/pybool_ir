@@ -21,7 +21,7 @@ transformers = "*"
 sentence-transformers = "*"
 nltk = "*"
 trectools = "*"
-ir-measures = "*"
+ir-measures = {editable = true, ref = "9460896dbeb9f63bfe08c9fc0d0d4eb9fe00153f", git = "https://github.com/terrierteam/ir_measures.git"}
 appdirs = "*"
 unsync = "*"
 aiofiles = "*"
@@ -31,5 +31,13 @@ seaborn = "*"
 prompt-toolkit = "*"
 lucene = { path = "./pylucene/dist/lucene-9.4.1-cp310-cp310-macosx_12_0_arm64.whl" }
 lupyne = {editable = true, ref = "90874273a33bc02b0ac502f2daed2fde326f7511", git = "https://github.com/coady/lupyne.git"}
+snakeviz = "*"
+pip = "*"
+install = "*"
+fnvhash = "*"
+collection = "*"
+flatdict = "*"
+statsmodels = "*"
+networkx = "*"
 
 [dev-packages]

@@ -205,7 +205,7 @@ def __load_clef_tar(name: str, git_hash: str, year: int, subfolder: str,
     return Collection.from_dir(download_dir)
 
 
-def __load_shuai(name: str, year: int) -> Collection:
+def __load_wang_clef(name: str, year: int) -> Collection:
     git_hash = "7a23a14ced14021f4db910f83330426b07ce3e5c"
     collection_url = f"https://raw.githubusercontent.com/ielab/meshsuggest/{git_hash}/queries_new/original_full_query/{year}/testing/"
 
@@ -241,12 +241,27 @@ def __load_shuai(name: str, year: int) -> Collection:
                                             mapped_id = str(raw_file)
                                 with open(tar_raw / mapped_id, "r") as topic_f:
                                     topic_q = parse_clef_tar_topic(topic_f.read(), parse_query=True)
-                                    query = ovid.transform(topic_q.raw_query)
+                                    topic_q.raw_query = topic_q.raw_query. \
+                                        replace("77679-27-7[rn]", ""). \
+                                        replace("limit 3 to humans", ""). \
+                                        replace("limit 4 to ed=19920101-20120831", "")
+                                    topic_q.raw_query = "\n".join([line for line in topic_q.raw_query.split("\n") if line.strip() != ''])
+                                    if len(topic_q.raw_query.split("\n")) > 2:
+                                        query = ovid.transform(topic_q.raw_query)
+                                    else:
+                                        query = topic_q.raw_query
+
+                        if topic.identifier == "CD008122" or topic.identifier == "CD011431":
+                            query = query + ")"
+                        if topic.identifier == "CD009263":
+                            query = "(" + query
+                            query = query.replace("""((mibg OR iodine-123 metaiodobenzylguanidine imaging OR iodine-123 metaiodobenzylguanidine Imag* OR metaiodobenzyl guanidine OR Metaiodobenzylguanidin* OR metaiodobenzylguanidine scintigraphy OR metaiodobenzylguanidine scintigraph*) OR (123I-mIBG) OR (3 iodobenzylguanidine OR meta-iodobenzylguanidine OR meta iodobenzylguanidine OR iobenguane OR m iodobenzylguanidine OR m iodobenzylguanidine OR (iobenguane AND (131I) OR (3-IodoND (131I) AND benzyl) AND guanidine) OR 3-iodobenzylguanidine, 123i labeled OR 123i labeled 3-iodobenzylguanidine OR 3 iodobenzylguanidine, 123i labeled OR meta-iodobenzylguanidine OR meta iodobenzylguanidine OR m-iodobenzylguanidine OR m iodobenzylguanidine OR iobenguane (131I) OR (3-Iodo131I) benzyl) guanidine)""",
+                                                  """(mibg OR iodine-123 metaiodobenzylguanidine imaging OR iodine-123 metaiodobenzylguanidine Imag* OR metaiodobenzyl guanidine OR Metaiodobenzylguanidin* OR metaiodobenzylguanidine scintigraphy OR metaiodobenzylguanidine scintigraph*) OR (123I-mIBG) OR (3 iodobenzylguanidine OR meta-iodobenzylguanidine OR meta iodobenzylguanidine OR iobenguane OR m iodobenzylguanidine OR m iodobenzylguanidine OR (iobenguane AND ((131I OR 3-IodoND 131I) AND benzyl) AND guanidine) OR 3-iodobenzylguanidine, 123i labeled OR 123i labeled 3-iodobenzylguanidine OR 3 iodobenzylguanidine, 123i labeled OR meta-iodobenzylguanidine OR meta iodobenzylguanidine OR m-iodobenzylguanidine OR m iodobenzylguanidine OR iobenguane 131I OR 3-Iodo131I benzyl guanidine)""")
 
                         query = query.replace("""tomography[MeSH Terms] tomography, optical coherence[MeSH Terms]""",
                                               """tomography[MeSH Terms] OR tomography, optical coherence[MeSH Terms]""")
-                        query = query.replace(""""Diagnostic and Statistical Manual of Mental Disorders[MeSH Terms]""",
-                                              """"Diagnostic and Statistical Manual of Mental Disorders"[MeSH Terms]""")
+                        query = query.replace("OR ()", "")
+                        query = query.replace('"Diagnostic and Statistical Manual of Mental Disorders', '"Diagnostic and Statistical Manual of Mental Disorders"')
 
                         shuai_f.write(Topic(identifier=topic.identifier,
                                             description=topic.description,
@@ -256,23 +271,18 @@ def __load_shuai(name: str, year: int) -> Collection:
     return Collection.from_dir(download_dir)
 
 
-def __load_shuai_clef_tar_2017_testing(name: str):
+def __load_wang_clef_tar_2017_testing(name: str):
     __load_clef_tar_2017_testing("clef-tar/2017/testing")
-    return __load_shuai(name, 2017)
+    return __load_wang_clef(name, 2017)
 
 
-def __load_shuai_clef_tar_2018_testing(name: str):
-    __load_clef_tar_2017_testing("clef-tar/2018/testing")
-    return __load_shuai(name, 2018)
-
-
-def __load_shuai_clef_tar_2019_testing(name: str):
-    __load_clef_tar_2017_testing("clef-tar/2019/testing")
-    return __load_shuai(name, 2019)
+def __load_wang_clef_tar_2018_testing(name: str):
+    __load_clef_tar_2018_testing("clef-tar/2018/testing")
+    return __load_wang_clef(name, 2018)
 
 
 def __load_sysrev_seed(name: str) -> Collection:
-    git_hash = "84d116a1ed2dae191cce64daff7f968323860c53"
+    git_hash = "c40598fc2ad8c7dea8840681de3386f78869d77a"
     collection_url = f"https://github.com/ielab/sysrev-seed-collection/raw/{git_hash}/collection_data/overall_collection.jsonl"
     download_dir = _base_dir / "collections" / name
     raw_collection = download_dir / "raw.jsonl"
@@ -295,12 +305,12 @@ def __load_sysrev_seed(name: str) -> Collection:
                 with open(topic_file, "a") as f:
                     if t["id"] == "32":
                         t["query"] = t["query"].replace("Ï", "I")
-                    if t["id"] == "51":
-                        t["query"] = t["query"][:-2]
 
                     f.write(Topic(identifier=t["id"],
-                                  description=t["search_name"],
-                                  raw_query=t["query"].replace("“", '"')
+                                  description=t["title"],
+                                  raw_query=t["query"] \
+                                  .replace('("Cochrane Database Syst Rev"[journal])', "")
+                                  .replace("“", '"')
                                   .replace("”", '"')
                                   .replace("Atonic[tiab] Impaired[tiab]", 'Atonic[tiab] OR Impaired[tiab]')  # Covers topic 39.
                                   .replace("]/))", ']))')  # Covers topic 60.
@@ -356,9 +366,8 @@ __collection_load_methods = {
     # -------------------------------------------------------------------------------------------
     # For some work on MeSH Term suggestion, the CLEF TAR queries have been translated to Pubmed.
     # NOTE: Only testing queries have been translated.
-    "shuai/clef-tar/2017/testing": __load_shuai_clef_tar_2017_testing,
-    "shuai/clef-tar/2018/testing": __load_shuai_clef_tar_2018_testing,
-    "shuai/clef-tar/2019/testing": __load_shuai_clef_tar_2019_testing,
+    "wang/clef-tar/2017/testing": __load_wang_clef_tar_2017_testing,
+    "wang/clef-tar/2018/testing": __load_wang_clef_tar_2018_testing,
     # -------------------------------------------------------------------------------------------
     # For CLEF TAR 2019, there are no additional topics that contain new Pubmed queries.
     # -------------------------------------------------------------------------------------------

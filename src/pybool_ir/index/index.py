@@ -60,14 +60,17 @@ class Indexer(ABC):
                 self.index.commit()
         self.index.commit()
 
-    def _set_index_fields(self, optional_fields: List[str]):
-        if optional_fields is not None:
-            for optional_field_name in optional_fields:
-                self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields)
+    def _set_index_fields(self):
+        if self.optional_fields is not None:
+            for optional_field_name in self.optional_fields:
+                if optional_field_name.startswith("@"):
+                    self.index.set(optional_field_name[1:], engine.Field.String, stored=self.store_fields)
+                else:
+                    self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields)
 
     def __enter__(self):
         self.index = engine.Indexer(directory=str(self.index_path), nrt=True, )
-        self._set_index_fields(self.optional_fields)
+        self._set_index_fields()
         self.set_index_fields(store_fields=self.store_fields)
         return self
 

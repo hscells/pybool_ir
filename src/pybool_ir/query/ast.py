@@ -18,7 +18,7 @@ class OperatorNode(ASTNode):
 @dataclass
 class AtomNode(ASTNode):
     query: str
-    field: List[str]
+    field: List[str] | str
 
     def __str__(self):
         return self.__repr__()

@@ -43,9 +43,10 @@ class Atom(ParseNode):
         self.field = tokens[0][1] if len(tokens[0]) > 1 else DEFAULT_FIELD
 
     def __query__(self):
-        if self.unit.quoted:
-            return Q.phrase(self.field, self.unit.query)
-        return Q.term(self.field, self.unit.raw_query)
+        if self.unit.quoted and len(self.unit.analyzed_query.split()) > 1:
+            return Q.near(self.field, *self.unit.analyzed_query.split())
+
+        return Q.term(self.field, self.unit.analyzed_query)
 
     def __ast__(self):
         return AtomNode(query=self.unit.raw_query, field=self.field)
@@ -120,7 +121,7 @@ class GenericQueryParser(QueryParser):
         term = (~PrecededBy(Literal("*")) & (Word(alphanums) ^ Literal("*"))).set_parse_action(QueryAtom)
         phrase = Combine(Literal('"') + _valid_phrase + Literal('"')).set_parse_action(QueryAtom)
 
-        field_restriction = (Suppress(":") + Word(alphanums))
+        field_restriction = (Suppress(":") + Word(alphanums + "_."))
 
         atom = Group(((term | phrase) + Optional(field_restriction))).set_parse_action(Atom)
         operators = [(NOT, 2, OpAssoc.RIGHT, NotOp), (OR, 2, OpAssoc.LEFT, BinOp), (AND, 2, OpAssoc.LEFT, BinOp)] + \
@@ -133,3 +134,9 @@ class GenericQueryParser(QueryParser):
             print(raw_query)
             raise e
         return expression.parse_string(raw_query, parse_all=True)[0]
+
+    def format(self, node: ASTNode) -> str:
+        """
+          Format an AST node into a raw query.
+          """
+        return str(node)
