@@ -1,17 +1,29 @@
+"""
+Generic indexers and searchers for JSONL and JSONLD files.
+"""
+
 import json
 from pathlib import Path
 from typing import List, Iterable
 
 from pybool_ir.index.document import Document
-from pybool_ir.index.index import Indexer
+from pybool_ir.index.index import Indexer, SearcherMixin
 
 import lucene
 from lupyne import engine
+
+from pybool_ir.query.generic.parser import DEFAULT_FIELD
 
 assert lucene.getVMEnv() or lucene.initVM()
 
 
 class JsonlIndexer(Indexer):
+    """
+    Generic indexer for JSONL files. The JSONL file should contain one JSON object per line.
+
+    Each document must have an `id` and `date` field.
+    """
+
     def process_document(self, doc: Document) -> Document:
         assert (doc.has_key("id") and doc.has_key("date"))
         return doc
@@ -33,6 +45,14 @@ class JsonlIndexer(Indexer):
 
 
 class JsonldIndexer(JsonlIndexer):
+    """
+    Generic indexer for JSONLD files. The JSONLD file should contain one JSON object per line.
+    This indexer assumes that the first line of the file is the document ID, and the second line is the document data.
+    This class can be used to index data in the same way ElasticSearch does.
+
+    Each document must have an `id` and `date` field.
+    """
+
     def parse_documents(self, fname: Path) -> (Iterable[Document], int):
         with open(fname, "r") as f:
             total = sum(1 for _ in f)
@@ -48,3 +68,61 @@ class JsonldIndexer(JsonlIndexer):
                         yield Document.from_dict(data)
 
         return read_jsonld(), total
+
+
+class GenericSearcher(Indexer, SearcherMixin):
+    """
+    Generic searcher for any kind of index.
+    """
+
+    def search(self, query: str, n_hits=10) -> List[Document]:
+        hits = self.index.search(query, scores=False, mincount=n_hits)
+        if n_hits is None:
+            n_hits = len(hits)
+        for hit in hits[:n_hits]:
+            if self.store_fields:
+                article: Document = Document.from_dict(hit.dict())  # TODO: automatically calculate field list.
+                yield article
+            else:
+                yield Document.from_dict(hit.dict())
+
+    def process_document(self, doc: Document) -> Document:
+        pass
+
+    def parse_documents(self, fname: Path) -> (Iterable[Document], int):
+        pass
+
+    def set_index_fields(self, store_fields: bool = False):
+        pass
+
+    def search_fmt(self, query: str, n_hits=10, hit_formatter: str = None):
+        if hit_formatter is None and self.store_fields:
+            hit_formatter = "{id} {date} " + "{" + DEFAULT_FIELD + "}\n"
+        elif hit_formatter is None:
+            hit_formatter = "{id} {date}\n"
+        hits = self.index.search(query, scores=False, mincount=n_hits)
+        print(f"hits: {len(hits)}")
+        for hit in hits[:n_hits]:
+            if self.store_fields:
+                with self.index as searcher:
+                    doc = searcher.document(hit["id"])
+                    print(doc)
+                article: Document = Document.from_dict(hit.dict("mesh_heading_list",
+                                                                "mesh_qualifier_list",
+                                                                "mesh_major_heading_list",
+                                                                "supplementary_concept_list",
+                                                                "keyword_list",
+                                                                "publication_type"))
+                print(hit_formatter.format(id=article.id,
+                                           title=article.title,
+                                           date=article.date,
+                                           mesh_heading_list=article.mesh_heading_list,
+                                           mesh_qualifier_list=article.mesh_qualifier_list,
+                                           supplementary_concept_list=article.supplementary_concept_list,
+                                           keyword_list=article.keyword_list,
+                                           publication_type=article.publication_type,
+                                           mesh_major_heading_list=article.mesh_major_heading_list))
+            else:
+                article = Document.from_dict(hit.dict())
+                print(hit_formatter.format(id=article.id))
+        print("====================")

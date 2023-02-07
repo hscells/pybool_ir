@@ -1,14 +1,22 @@
+"""
+Implementation for how documents are represented in pybool_ir.
+"""
+
 import json
 from datetime import datetime
 
 import lucene
-from lupyne import engine
-from tqdm.auto import tqdm
 
 assert lucene.getVMEnv() or lucene.initVM()
 
 
 class Document(object):
+    """
+    This class is the representation for documents.
+    Data to be indexed in pybool_ir should be wrapped in this class.
+    Documents retrieved from the index will also be wrapped in this class.
+    In py_bool_ir, documents must have an id and date field, and this class will ensure that both of these fields are present.
+    """
     def __init__(self, **kwargs):
         super(Document, self).__setattr__("fields", {})
         for field_name, field_value in kwargs.items():

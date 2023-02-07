@@ -1,3 +1,7 @@
+"""
+Classes and methods for loading collections.
+"""
+
 import datetime
 import json
 import os
@@ -13,7 +17,8 @@ from dataclasses_json import dataclass_json
 from ir_measures import Qrel
 
 from pybool_ir import util
-from pybool_ir.query import ovid
+from pybool_ir.query import ovid, PubmedQueryParser
+from pybool_ir.query.ast import OperatorNode
 
 _GITHASH_CLEFTAR = "8ce8a63bebb7d88f42dc1abad3e5744e315d07ae"
 _package_name = "pybool_ir"
@@ -23,6 +28,9 @@ _base_dir = Path(appdirs.user_data_dir(_package_name))
 @dataclass_json
 @dataclass
 class Topic:
+    """
+    A topic contains a query and a date range for reproducing when the query was issued.
+    """
     identifier: str
     description: str
     raw_query: str
@@ -31,6 +39,9 @@ class Topic:
 
     @classmethod
     def from_file(cls, topic_path: Path) -> List["Topic"]:
+        """
+        Internally, pybool_ir uses a jsonl file to store topics. This method loads a topic from a jsonl file.
+        """
         with open(topic_path, "r") as f:
             for line in f:
                 yield Topic.from_json(line)
@@ -38,12 +49,19 @@ class Topic:
 
 @dataclass
 class Collection:
+    """
+    A collection contains a list of topics and a list of qrels.
+    """
     identifier: str
     topics: List[Topic]
     qrels: List[Qrel]
 
     @classmethod
     def from_dir(cls, collection_path: Path) -> "Collection":
+        """
+        Internally, pybool_ir stores collections as a directory with a topics.jsonl file and a qrels file.
+        This ensures a common format for all collections. This method loads a collection in this format.
+        """
         assert collection_path.is_dir()
 
         topics_path = collection_path / "topics.jsonl"
@@ -62,10 +80,18 @@ class Collection:
 
 
 def load_collection(name: str) -> Collection:
+    """
+    Given the name of a collection, load it from disk. A collection contains a list of topics and a list of qrels.
+    The actual documents for a collection are handled separately.
+    """
     return __collection_load_methods[name](name)
 
 
 def parse_clef_tar_topic(topic_str: str, date_from: str = "1940", date_to: str = "2017", parse_query: bool = False) -> Topic:
+    """
+    Helper function that parses a topic from the CLEF TAR collection.
+    These files are in a non-standard TREC format, so this function is used to parse them.
+    """
     topic_id = ""
     topic_description = ""
     topic_query = ""
@@ -326,6 +352,73 @@ def __load_sysrev_seed(name: str) -> Collection:
     return Collection.from_dir(download_dir)
 
 
+def __load_searchrefiner_logs(name: str) -> Collection:
+    git_hash = "fd8af97fa8f032d1adf3596a76c5c22758a3ff8c"
+    collection_url = f"https://raw.githubusercontent.com/ielab/searchrefiner-logs-collection/{git_hash}/searchrefiner.logical.log.json"
+    download_dir = _base_dir / "collections" / name
+    raw_collection = download_dir / "raw.jsonl"
+    topic_file = download_dir / "topics.jsonl"
+    qrels_file = download_dir / "qrels"
+
+    if not download_dir.exists():
+        os.makedirs(download_dir, exist_ok=True)
+        util.download_file(collection_url, raw_collection)
+
+        if os.path.exists(topic_file):
+            os.remove(topic_file)
+        if os.path.exists(qrels_file):
+            os.remove(qrels_file)
+
+        with open(raw_collection, "r") as cf:
+            log_data = json.load(cf)
+
+        topics = []
+        qrels = []
+
+        parser = PubmedQueryParser()
+
+        for log_id, logs in log_data.items():
+            for i, query_data in enumerate([logs[0], logs[-1]]):
+                if i > 0 and query_data["query"] == logs[0]["query"]:
+                    continue
+
+                if log_id == "INVALID":
+                    continue
+
+                if "[lang=pubmed]" not in query_data["raw"]:
+                    continue
+
+                try:
+                    raw_query = query_data["query"]
+                    raw_query = raw_query.replace('“', '"').replace('”', '"').replace('\\', '')
+                    tmp_q = parser.parse_ast(raw_query)
+                except Exception as e:
+                    print(e)
+                    continue
+
+                if not isinstance(tmp_q, OperatorNode):
+                    continue
+
+                qid = f"{log_id[:8]}0{i}"
+                topics.append(Topic(identifier=qid,
+                                    description="",
+                                    raw_query=raw_query,
+                                    date_from="1900/01/01",
+                                    date_to=datetime.strptime(query_data["time"], "%Y-%m-%dT%H:%M:%SZ").strftime("%Y/%m/%d")))
+                for pmid in query_data["pmids"]:
+                    qrels.append(Qrel(qid, pmid, 1))
+
+            with open(topic_file, "w") as f:
+                for topic in topics:
+                    f.write(topic.to_json() + "\n")
+
+            with open(qrels_file, "w") as f:
+                for qrel in qrels:
+                    f.write(f'{qrel.query_id} 0 {qrel.doc_id} 1\n')
+
+    return Collection.from_dir(download_dir)
+
+
 def __load_update_collection(name: str) -> Collection:
     import pickle
     import zipfile
@@ -357,6 +450,9 @@ __collection_load_methods = {
     # -------------------------------------------------------------------------------------------
     # For the sysrev-seed collection, we can use all the queries.
     "ielab/sysrev-seed-collection": __load_sysrev_seed,
+    # -------------------------------------------------------------------------------------------
+    # For the sysrev-seed collection, we can use all the queries.
+    "ielab/searchrefiner-logs-collection": __load_searchrefiner_logs,
     # -------------------------------------------------------------------------------------------
     # For CLEF TAR 2017 and 2018, the non-Pubmed queries are filtered out.
     "clef-tar/2017/training": __load_clef_tar_2017_training,

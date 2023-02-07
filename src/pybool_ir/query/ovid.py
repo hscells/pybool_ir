@@ -1,17 +1,16 @@
 """
-Created on Mon Oct 22 10:32:26 2018
 Convert OVID query to single-line PubMed query
-@author: amal alharbi
 
 This code is unlicensed, but should be attributed to
 https://github.com/Amal-Alharbi/OVID_TO_PUBMED
 
+The original author of this code is Amal Alharbi.
+
 Only very minor, superficial function naming changes
 have been applied to this file. It is mostly original.
-
-TODO: This code should be replaced with a proper
- parser of the likes of the Pubmed query parser.
 """
+
+# TODO: This code should be replaced with a proper parser of the likes of the Pubmed query parser.
 
 import re
 

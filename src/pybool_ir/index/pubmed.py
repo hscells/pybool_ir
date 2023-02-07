@@ -1,3 +1,7 @@
+"""
+Off-the-shelf indexer for PubMed articles.
+"""
+
 import calendar
 import gzip
 import json
@@ -14,7 +18,7 @@ from lupyne.engine.documents import Hit
 from tqdm.auto import tqdm
 
 from pybool_ir.index.document import Document
-from pybool_ir.index.index import Indexer
+from pybool_ir.index.index import Indexer, SearcherMixin
 
 assert lucene.getVMEnv() or lucene.initVM()
 
@@ -24,12 +28,15 @@ DEFAULT_DAY = 1
 
 
 class PubmedArticle(Document):
-    def __init__(self, docid: str, date: datetime, title: str, abstract: str,
+    """
+    This is a special override of the Document class for PubMed articles. The constructor takes in all the fields that are required for PubMed articles.
+    """
+    def __init__(self, id: str, date: datetime, title: str, abstract: str,
                  publication_type: List[str], mesh_heading_list: List[str],
                  mesh_qualifier_list: List[str], mesh_major_heading_list: List[str],
                  supplementary_concept_list: List[str], keyword_list: List[str], **optional_fields):
         super(PubmedArticle, self).__setattr__("fields", {
-            "id": docid,
+            "id": id,
             "date": date,
             "title": title,
             "abstract": abstract,
@@ -44,12 +51,16 @@ class PubmedArticle(Document):
 
     @staticmethod
     def from_hit(hit: Hit):
+        """
+        Create a PubmedArticle from a lucene Hit. This method also removes the `__id__` and `__score__` fields from the hit.
+        A document prior to indexing should be equivalent to a document retrieved from a hit using this method.
+        """
         d = hit.dict("mesh_heading_list",
-                                                "mesh_qualifier_list",
-                                                "mesh_major_heading_list",
-                                                "keyword_list",
-                                                "publication_type",
-                                                "supplementary_concept_list")
+                     "mesh_qualifier_list",
+                     "mesh_major_heading_list",
+                     "keyword_list",
+                     "publication_type",
+                     "supplementary_concept_list")
         del d["__id__"]
         del d["__score__"]
         return PubmedArticle.from_dict(d)
@@ -61,7 +72,7 @@ for _i in range(31):
     _possible_days[f"{_i}th"] = str_i
 
 
-def day_str_to_day(day_str: str) -> Tuple[str, bool]:
+def _day_str_to_day(day_str: str) -> Tuple[str, bool]:
     if day_str.isdigit():
         return day_str, True
     if day_str in _possible_days:
@@ -141,7 +152,7 @@ _quarters = {
 _possible_months = {**_months, **_seasons, **_quarters}
 
 
-def month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -> int:
+def _month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -> int:
     # Strange months that fail to parse
     # metaboliche -> ?
     # easter -> ?
@@ -199,6 +210,14 @@ def month_str_to_month(month_str: str, fail_on_nonparseable_str: bool = False) -
 
 
 def parse_medline_date(date_str: str) -> Tuple[int, int, int]:
+    """
+    Parse a date string from a Medline record. The returned value is a tuple of (year, month, day).
+
+    The following is a needlessly complicated, yet accurate implementation
+    of how Pubmed handles the publication date of documents.
+    For more information about the nuances of this technical marvel, see:
+    https://pubmed.ncbi.nlm.nih.gov/help/#dp
+    """
     day = str(DEFAULT_DAY)
     month = str(DEFAULT_MONTH)
     year = str(DEFAULT_YEAR)
@@ -241,11 +260,11 @@ def parse_medline_date(date_str: str) -> Tuple[int, int, int]:
         year, month = month, year
 
     # Let's find out if the day could be a day.
-    day, is_day = day_str_to_day(day)
+    day, is_day = _day_str_to_day(day)
     if not is_day:  # Hmm, maybe the day isn't a day.
         # Therefore, the day is likely a month!
         day, month = month, day
-        day, _ = day_str_to_day(day)
+        day, _ = _day_str_to_day(day)
 
     # Hail Mary at this point, who knows what the day is!
     if not day.isdigit():
@@ -253,18 +272,16 @@ def parse_medline_date(date_str: str) -> Tuple[int, int, int]:
 
     # Now we can convert the parts to ints for our proper datetime object.
     year = int(year) if year is not None else DEFAULT_YEAR
-    month = month_str_to_month(month) if month is not None else DEFAULT_MONTH  # Special parsing for months.
+    month = _month_str_to_month(month) if month is not None else DEFAULT_MONTH  # Special parsing for months.
     day = int(day) if day is not None else DEFAULT_DAY
     return year, month, day
 
 
 def parse_pubmed_article_node(element: Element) -> PubmedArticle:
+    """
+    Parse a PubmedArticle node from a Pubmed XML element.
+    """
     pmid = element.find("MedlineCitation/PMID").text
-
-    # The following is a needlessly complicated, yet accurate implementation
-    # of how Pubmed handles the publication date of documents.
-    # For more information about the nuances of this technical marvel, see:
-    # https://pubmed.ncbi.nlm.nih.gov/help/#dp
     article_date: datetime
     journal_date_element = element.find(
         "MedlineCitation/Article/Journal/JournalIssue/PubDate"
@@ -280,7 +297,7 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
             day = journal_date_element.find("Day")
 
             year = int(year.text) if year is not None else DEFAULT_YEAR
-            month = month_str_to_month(month.text) if month is not None else DEFAULT_MONTH
+            month = _month_str_to_month(month.text) if month is not None else DEFAULT_MONTH
             day = int(day.text) if day is not None else DEFAULT_DAY
 
         # Okay, *finally* we have integer representations.
@@ -352,9 +369,22 @@ def parse_pubmed_article_node(element: Element) -> PubmedArticle:
     )
 
 
-class PubmedIndexer(Indexer):
+class PubmedIndexer(Indexer, SearcherMixin):
+    """
+    Off-the-shelf indexer for Pubmed XML files.
+
+    >>> from pybool_ir.index.pubmed import PubmedIndexer
+    >>>
+    >>> with PubmedIndexer("path/to/index", store_fields=True) as idx:
+    >>> 	idx.bulk_index("path/to/baseline")
+
+    """
+
     @staticmethod
     def read_file(fname: Path) -> Iterable[Document]:
+        """
+        Read a single file, yielding documents. Supports both XML and GZipped XML files. This is how PubMed documents are stored on the baseline FTP server.
+        """
         if str(fname).endswith(".gz"):
             with gzip.open(fname, "rb") as f:
                 root = et.fromstring(f.read())
@@ -368,13 +398,22 @@ class PubmedIndexer(Indexer):
 
     @staticmethod
     def read_folder(folder: Path) -> Iterable[Document]:
+        """
+        Read a folder of XML files. This method should be used when the PubMed documents are stored in a folder.
+        """
         valid_files = [f for f in os.listdir(str(folder)) if not f.startswith(".")]
         for file in tqdm(valid_files, desc="folder progress", total=len(valid_files), position=0):
             print(file)
             for article in PubmedIndexer.read_file(folder / file):
                 yield article
 
-    def read_jsonl(self, file: Path) -> Iterable[Document]:
+    @staticmethod
+    def read_jsonl(file: Path) -> Iterable[Document]:
+        """
+        Read a JSONL file. This method should be used when the PubMed documents are stored in a JSONL file.
+        The pybool_ir command line tool can be used to convert PubMed XML files to JSONL files.
+        Conversion of the files makes indexing considerably faster since the XML files do not need to be parsed.
+        """
         with open(file, "r") as f:
             for line in f:
                 yield PubmedArticle.from_json(line)
@@ -386,7 +425,7 @@ class PubmedIndexer(Indexer):
         else:
             with open(baseline_path) as f:
                 total = sum(1 for _ in f)
-            articles = self.read_jsonl(baseline_path)
+            articles = PubmedIndexer.read_jsonl(baseline_path)
         return articles, total
 
     def process_document(self, doc: Document) -> Document:
@@ -432,8 +471,23 @@ class PubmedIndexer(Indexer):
         self.index.set("mesh_major_heading_list", engine.Field.String, stored=store_fields)
         self.index.set("supplementary_concept_list", engine.Field.String, stored=store_fields)
 
-    def search(self, query: str, n_hits=10,
-               hit_formatter: str = None):
+    def search(self, query: str, n_hits=10) -> List[Document]:
+        hits = self.index.search(query, scores=False, mincount=n_hits)
+        if n_hits is None:
+            n_hits = len(hits)
+        for hit in hits[:n_hits]:
+            if self.store_fields:
+                article: PubmedArticle = PubmedArticle.from_dict(hit.dict("mesh_heading_list",
+                                                                          "mesh_qualifier_list",
+                                                                          "mesh_major_heading_list",
+                                                                          "supplementary_concept_list",
+                                                                          "keyword_list",
+                                                                          "publication_type"))
+                yield article
+            else:
+                yield PubmedArticle.from_dict(hit.dict())
+
+    def search_fmt(self, query: str, n_hits=10, hit_formatter: str = None):
         if hit_formatter is None and self.store_fields:
             hit_formatter = "--------------------\nPMID * {id} * https://pubmed.ncbi.nlm.nih.gov/{id}\nTITL * {title}\npublished: {date}\nMAJR * {mesh_major_heading_list}\nMESH * {mesh_heading_list}\nQUAL * {mesh_qualifier_list}\nSUPP * {supplementary_concept_list}\nKWRD * {keyword_list}\nPUBT * {publication_type}\n"
         elif hit_formatter is None:

@@ -1,11 +1,16 @@
+"""
+Simple mapping of PubMed fields to the fields in the Lucene index.
+"""
+
 # TODO: There needs to be some more work to restrict certain
 #       atoms to fields, e.g., date->dp, but not date->title.
 
+#: The mapping of PubMed fields to the fields in the Lucene index.
 mapping = {
     # TODO: At the moment, the fields must be arrays, since
     #       the title and the abstract are separate fields.
     "All Fields": ["all_fields"],
-    "all": ["all_fields"], # Might be unofficial?
+    "all": ["all_fields"],  # Might be unofficial?
     "Title/Abstract": ["title", "abstract"],
     "tiab": ["title", "abstract"],
     "Title": ["title"],

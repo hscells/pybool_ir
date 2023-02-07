@@ -1,3 +1,7 @@
+"""
+Base classes for representing queries.
+"""
+
 from abc import ABC, abstractmethod
 
 import lucene
@@ -12,6 +16,10 @@ Q = engine.Query
 
 
 class QueryParser(ABC):
+    """
+    Base class for implementing query parsers.
+    A query parser should be able to parse a raw query into an AST node, and then format that AST node into a lucene query.
+    """
 
     @abstractmethod
     def parse_lucene(self, raw_query: str) -> Q:

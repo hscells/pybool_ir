@@ -1,3 +1,7 @@
+"""
+Generic query parser that can be used to parse queries into an AST and then into a Lucene query.
+"""
+
 from abc import abstractmethod
 from typing import List
 
@@ -93,6 +97,9 @@ class UnsupportedOp(OpNode, ParseNode):
 
 
 class GenericQueryParser(QueryParser):
+    """
+    Implementation of a generic query parser with syntax similar to Lucene's query syntax.
+    """
     def __init__(self, additional_operators: List[str] = None):
         if additional_operators is None:
             additional_operators = []

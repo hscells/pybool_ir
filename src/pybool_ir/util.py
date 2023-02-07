@@ -1,3 +1,7 @@
+"""
+Utility functions for pybool_ir.
+"""
+
 import os
 from io import BufferedRWPair, FileIO, BytesIO
 from pathlib import Path
@@ -9,12 +13,12 @@ import requests
 
 class ProgressFile(BufferedRWPair):
     """
-    # THANK YOU: https://stackoverflow.com/a/62792935
     This class opens a file for reading or writing, and when it is read
     or written to, it updates a progress bar to show how far along
     the reading or writing is.
     """
 
+    # THANK YOU: https://stackoverflow.com/a/62792935
     def __init__(self, filename, mode="r", max_value=None):
         # noinspection PyArgumentList
         raw = FileIO(filename, mode=mode)
@@ -49,11 +53,11 @@ class ProgressFile(BufferedRWPair):
         calc_sz = size
         if not calc_sz:
             calc_sz = self.length - self.tell()
-        self.progress_callback(position=self.tell(), read_size=calc_sz)
+        self._progress_callback(position=self.tell(), read_size=calc_sz)
         return super(ProgressFile, self).read(size)
 
     def write(self, b: Union[bytes, bytearray]) -> int:
-        self.progress_callback(position=self.written, read_size=len(b))
+        self._progress_callback(position=self.written, read_size=len(b))
         # We don't get `tell` in write mode, so can just calculate this way.
         self.written += len(b)
         return super(ProgressFile, self).write(b)
@@ -62,7 +66,7 @@ class ProgressFile(BufferedRWPair):
         self.bar.finish()  # Formats the progress bar nicely at completion.
         return super(ProgressFile, self).close()
 
-    def progress_callback(self, position, read_size):
+    def _progress_callback(self, position, read_size):
         if position + read_size > self.max_value:
             read_size = 0
             position = self.max_value
@@ -70,6 +74,9 @@ class ProgressFile(BufferedRWPair):
 
 
 def download_file(url: str, download_to: Path):
+    """
+    Helper function that downloads a file from a URL and shows a progress bar.
+    """
     r = requests.get(url, stream=True)
     size = int(r.headers.get("content-length"))
     with ProgressFile(download_to, "wb", max_value=size) as f:

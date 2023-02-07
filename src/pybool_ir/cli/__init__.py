@@ -1,3 +1,7 @@
+"""
+Command line interface for pybool_ir.
+"""
+
 from pathlib import Path
 
 import click
@@ -26,6 +30,11 @@ def csur():
     """CSUR related commands."""
 
 
+@cli.group()
+def generic():
+    """Generic commands for indexing and searching arbitrary document collections."""
+
+
 @pubmed.command("download")
 @click.option(
     "-b",
@@ -37,7 +46,7 @@ def csur():
     help="location to download Pubmed baseline"
 )
 def pubmed_download(baseline_path: Path):
-    from pybool_ir.pubmed.baseline import download_baseline
+    from pybool_ir.data.pubmed import download_baseline
     download_baseline(Path(baseline_path))
 
 
@@ -61,7 +70,7 @@ def pubmed_download(baseline_path: Path):
     help="location to write processed file"
 )
 def pubmed_process(baseline_path: Path, output_path: Path):
-    from pybool_ir.pubmed.index import PubmedIndexer
+    from pybool_ir.index.pubmed import PubmedIndexer
     with open(Path(output_path), "w") as f:
         for article in tqdm(PubmedIndexer.read_folder(Path(baseline_path)), desc="articles processed", position=1):
             f.write(f"{article.to_json()}\n")
@@ -97,7 +106,7 @@ def pubmed_process(baseline_path: Path, output_path: Path):
     help="whether to store fields or not"
 )
 def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
-    from pybool_ir.pubmed.index import PubmedIndexer
+    from pybool_ir.index.pubmed import PubmedIndexer
     with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
         ix.bulk_index(Path(baseline_path))
 
@@ -123,7 +132,7 @@ def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
     help="whether to display stored fields or not"
 )
 def pubmed_search(index_path: Path, store_fields: bool):
-    from pybool_ir.pubmed.index import PubmedIndexer
+    from pybool_ir.index.pubmed import PubmedIndexer
     from pybool_ir.query.pubmed.parser import PubmedQueryParser
     from prompt_toolkit import PromptSession
     from prompt_toolkit.validation import Validator
@@ -135,7 +144,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
         def validate(self, query):
             text = query.text
             try:
-                parser.parse(text)
+                parser._parse(text)
             except Exception as e:
                 raise ValidationError(message=str(e), cursor_position=-1)
 
@@ -169,10 +178,54 @@ def pubmed_search(index_path: Path, store_fields: bool):
     help="location to write processed file"
 )
 def csur_process(raw_path: Path, output_path: Path):
-    from pybool_ir.csur.parser import read_folder
+    from pybool_ir.data.csur.parser import read_folder
     with open(Path(output_path), "w") as f:
         for review in read_folder(Path(raw_path)):
             f.write(f"{review.to_json()}\n")
 
 
+@generic.command("search")
+@click.option(
+    "-i",
+    "--index",
+    "index_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to the lucene index"
+)
+@click.option(
+    "-s",
+    "--store",
+    "store_fields",
+    default=False,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to display stored fields or not"
+)
+def generic_search(index_path: Path, store_fields: bool):
+    from pybool_ir.index.generic import GenericSearcher
+    from pybool_ir.query import GenericQueryParser
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.validation import Validator
+    from prompt_toolkit.validation import ValidationError
 
+    parser = GenericQueryParser()
+
+    class QueryValidator(Validator):
+        def validate(self, query):
+            text = query.text
+            try:
+                parser.parse(text)
+            except Exception as e:
+                raise ValidationError(message=str(e), cursor_position=-1)
+
+    with GenericSearcher(Path(index_path), store_fields=store_fields) as ix:
+        print(f"pybool_ir {pybool_ir.__version__}")
+        print(f"loaded: {ix.index_path}")
+        session = PromptSession()
+        while True:
+            raw_query = session.prompt("?>", validator=QueryValidator())
+            lucene_query = parser.parse_lucene(raw_query)
+            ix.search(lucene_query)

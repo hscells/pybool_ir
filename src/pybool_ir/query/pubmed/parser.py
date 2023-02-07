@@ -1,3 +1,7 @@
+"""
+Implementation of a PubMed query parser.
+"""
+
 import datetime
 from abc import abstractmethod
 from calendar import monthrange
@@ -6,7 +10,7 @@ from typing import List
 
 import lucene
 from lupyne import engine
-from lupyne.engine import Field, DateTimeField
+from lupyne.engine import DateTimeField
 # noinspection PyUnresolvedReferences
 from org.apache.lucene import search
 from pyparsing import (
@@ -15,9 +19,9 @@ from pyparsing import (
     alphanums,
     Forward,
     CaselessKeyword,
-    ParserElement, Suppress, infix_notation, OpAssoc, Group, Literal, Combine, OneOrMore, nums, White, PrecededBy)
+    Suppress, infix_notation, OpAssoc, Group, Literal, Combine, OneOrMore, nums, White, PrecededBy)
 
-from pybool_ir.pubmed.mesh import MeSHTree
+from pybool_ir.data.pubmed import MeSHTree
 from pybool_ir.query.parser import MAX_CLAUSES
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.ast import OperatorNode, AtomNode, ASTNode
@@ -37,7 +41,7 @@ analyzer = engine.analyzers.Analyzer.standard()
 # You can call the .__query__() method to create a Lucene query.
 # You can call the .__ast__() method to create an AST object.
 
-class ParseNode(object):
+class _ParseNode(object):
     @abstractmethod
     def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
         raise NotImplementedError()
@@ -47,7 +51,7 @@ class ParseNode(object):
         raise NotImplementedError()
 
 
-class OpNode:
+class _OpNode:
     def __init__(self, tokens):
         self.operator = tokens[0][1]
         self.operands = tokens[0][::2]
@@ -60,7 +64,7 @@ class OpNode:
         return OperatorNode(operator=self.operator, children=[node.__ast__() for node in self.operands])
 
 
-class NotOp(OpNode, ParseNode):
+class _NotOp(_OpNode, _ParseNode):
     def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
         lhs = self.operands[0].__query__(tree, optional_fields=optional_fields)
         rhs = self.operands[1].__query__(tree, optional_fields=optional_fields)
@@ -70,7 +74,7 @@ class NotOp(OpNode, ParseNode):
         return builder.build()
 
 
-class BinOp(OpNode, ParseNode):
+class _BinOp(_OpNode, _ParseNode):
     def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
         if self.operator == "AND":
             op = Q.all
@@ -81,10 +85,10 @@ class BinOp(OpNode, ParseNode):
 
 # The following classes are used to create Lucene queries once parsed.
 
-class Atom(ParseNode):
+class _Atom(_ParseNode):
     def __init__(self, tokens):
         self.unit: UnitAtom = tokens[0][0]
-        self.field = tokens[0][1] if len(tokens[0]) > 1 else default_field
+        self.field = tokens[0][1] if len(tokens[0]) > 1 else _default_field
 
     def __repr__(self):
         return f"{self.unit}[{self.field}]"
@@ -95,8 +99,8 @@ class Atom(ParseNode):
     @staticmethod
     def has_mesh_field(mapped_fields: List[str]) -> bool:
         return "mesh_heading_list" in mapped_fields or \
-               "mesh_major_heading_list" in mapped_fields or \
-               "mesh_qualifier_list" in mapped_fields
+            "mesh_major_heading_list" in mapped_fields or \
+            "mesh_qualifier_list" in mapped_fields
 
     def __query__(self, tree: MeSHTree, optional_fields: List[str] = None):
         if optional_fields is not None and self.field.__repr__() in optional_fields:
@@ -127,7 +131,7 @@ class Atom(ParseNode):
             )
 
         # Special case for MeSH query with qualifier.
-        if isinstance(self.unit, MeSHAndQualifierAtom):
+        if isinstance(self.unit, _MeSHAndQualifierAtom):
             if self.field.field_op is None:
                 for heading in tree.explode(self.unit.query[0]):
                     expansion_atoms.append(Q.regexp("mesh_heading_list", heading))
@@ -179,7 +183,7 @@ class Atom(ParseNode):
             return Q.any(*[Q.near(f, *self.unit.analyzed_query.split()) for f in mapped_fields])
 
         # Dates.
-        elif isinstance(self.unit, DateAtom):
+        elif isinstance(self.unit, _DateAtom):
             assert len(mapped_fields) == 1
             # field = indexer.set(mapped_fields[0], engine.DateTimeField, stored=True)
             field = DateTimeField(mapped_fields[0], stored=True)
@@ -196,7 +200,7 @@ class Atom(ParseNode):
             return field.range(datetime.date(self.unit.year, 1, 1), datetime.date(self.unit.year, 12, day_end))
 
         # Date ranges.
-        elif isinstance(self.unit, DateRangeAtom):
+        elif isinstance(self.unit, _DateRangeAtom):
             assert len(mapped_fields) == 1
             # field = indexer.set(mapped_fields[0], engine.DateTimeField, stored=True)
             field = DateTimeField(mapped_fields[0], stored=True)
@@ -223,7 +227,7 @@ class Atom(ParseNode):
             return field.range(date_from, date_to)
 
 
-class MeSHAndQualifierAtom(UnitAtom):
+class _MeSHAndQualifierAtom(UnitAtom):
     def __init__(self, tokens):
         self._query = tokens[0]
         self._qualifier = tokens[1]
@@ -244,7 +248,7 @@ class MeSHAndQualifierAtom(UnitAtom):
         return f"{self._query}/{self._qualifier}"
 
 
-class DateAtom(UnitAtom):
+class _DateAtom(UnitAtom):
     def __init__(self, tokens):
         self.month = None
         self.day = None
@@ -270,14 +274,14 @@ class DateAtom(UnitAtom):
         return f"{self.year}"
 
     @classmethod
-    def from_str(cls, s: str) -> "DateAtom":
+    def from_str(cls, s: str) -> "_DateAtom":
         return cls(s.split("/"))
 
     def __repr__(self):
         return self.raw_query
 
 
-class DateRangeAtom(UnitAtom):
+class _DateRangeAtom(UnitAtom):
     def __init__(self, tokens):
         self.date_from = tokens[0]
         self.date_to = tokens[1]
@@ -292,15 +296,15 @@ class DateRangeAtom(UnitAtom):
         return self.__repr__()
 
     @classmethod
-    def from_str(cls, s: str) -> "DateRangeAtom":
+    def from_str(cls, s: str) -> "_DateRangeAtom":
         parts = s.split(":")
-        return cls([DateAtom.from_str(parts[0]), DateAtom.from_str(parts[1])])
+        return cls([_DateAtom.from_str(parts[0]), _DateAtom.from_str(parts[1])])
 
     def __repr__(self):
         return f"{repr(self.date_from)}:{repr(self.date_to)}"
 
 
-class FieldUnit:
+class _FieldUnit:
     def __init__(self, tokens):
         self.field = tokens[0]
         self.field_op = None
@@ -308,7 +312,7 @@ class FieldUnit:
             self.field_op = tokens[1]
 
     @classmethod
-    def from_str(cls, s: str) -> "FieldUnit":
+    def from_str(cls, s: str) -> "_FieldUnit":
         parts = s.split(":")
         return cls(parts) if len(parts) > 0 else cls([s])
 
@@ -321,21 +325,27 @@ class FieldUnit:
         return fields.mapping[self.field]
 
 
-default_field = FieldUnit(["All Fields"])
+#: The name of the default field that is used when no field is specified.
+default_field = "All Fields"
+_default_field = _FieldUnit([default_field])
 
 
 # --------------------------------------
 
 
 class PubmedQueryParser(QueryParser):
+    """
+    A parser for Pubmed queries.
+    """
+
     def __init__(self, tree: MeSHTree = MeSHTree(), optional_fields: List[str] = None, optional_operators: List[str] = None):
         self.tree = tree
         self.optional_fields = optional_fields
         self.optional_operators = optional_operators
 
-    def parse(self, raw_query: str) -> ParseNode:
+    def _parse(self, raw_query: str) -> _ParseNode:
         # Makes parsing faster. (?)
-        ParserElement.enablePackrat()
+        # ParserElement.enablePackrat()
 
         expression = Forward()
 
@@ -352,21 +362,21 @@ class PubmedQueryParser(QueryParser):
 
         phrase = Combine(Literal('"') + valid_phrase + Literal('"')).set_parse_action(QueryAtom)
         quoteless_phrase = (Combine(OneOrMore(valid_quoteless_phrase | White(" ", max=1) + ~(White() | AND | OR | NOT)))).set_parse_action(QueryAtom)
-        mesh_and_qualifier = (Suppress(Optional(Literal('"'))) + (Word(alphanums + valid_chars + " ") + Suppress(Literal("/")) + Word(alphanums + valid_chars + " ")) + Suppress(Optional(Literal('"')))).set_parse_action(MeSHAndQualifierAtom)
-        date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(DateAtom)
-        date_range = (date + Suppress(":") + date).set_parse_action(DateRangeAtom)
+        mesh_and_qualifier = (Suppress(Optional(Literal('"'))) + (Word(alphanums + valid_chars + " ") + Suppress(Literal("/")) + Word(alphanums + valid_chars + " ")) + Suppress(Optional(Literal('"')))).set_parse_action(_MeSHAndQualifierAtom)
+        date = (Word(nums, exact=4) + Optional(Suppress("/") + Word(nums, exact=2) + Optional(Suppress("/") + Word(nums, exact=2)))).set_parse_action(_DateAtom)
+        date_range = (date + Suppress(":") + date).set_parse_action(_DateRangeAtom)
 
         # Fields.
-        field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(FieldUnit)
+        field_restriction = (Suppress("[") + Word(alphanums + "-_/ ") + Optional(Literal(":noexp")) + Suppress("]")).set_parse_action(_FieldUnit)
 
         # Atom + Fields.
-        atom = Group((mesh_and_qualifier + field_restriction) | ((date_range | date | quoteless_phrase | phrase) + Optional(field_restriction))).set_parse_action(Atom)
+        atom = Group((mesh_and_qualifier + field_restriction) | ((date_range | date | quoteless_phrase | phrase) + Optional(field_restriction))).set_parse_action(_Atom)
 
         # Final expression.
         optional_operators = []
         if self.optional_operators is not None:
-            optional_operators = [(CaselessKeyword(op), 2, OpAssoc.LEFT, BinOp) for op in self.optional_operators]
-        expression << infix_notation(atom, [(NOT, 2, OpAssoc.RIGHT, NotOp), (OR, 2, OpAssoc.LEFT, BinOp), (AND, 2, OpAssoc.LEFT, BinOp)] + optional_operators)
+            optional_operators = [(CaselessKeyword(op), 2, OpAssoc.LEFT, _BinOp) for op in self.optional_operators]
+        expression << infix_notation(atom, [(NOT, 2, OpAssoc.RIGHT, _NotOp), (OR, 2, OpAssoc.LEFT, _BinOp), (AND, 2, OpAssoc.LEFT, _BinOp)] + optional_operators)
 
         raw_query = raw_query.replace(":NoExp", ":noexp")
         try:
@@ -383,16 +393,16 @@ class PubmedQueryParser(QueryParser):
     def parse_lucene(self, raw_query: str) -> Q:
         # NOTE: converting the query to a string makes the date range queries fail. (?)
         try:
-            return self.node_to_lucene(self.parse(raw_query))  # .__str__()
+            return self._node_to_lucene(self._parse(raw_query))  # .__str__()
         except Exception as e:
             print(raw_query)
             raise e
 
-    def node_to_lucene(self, node: ParseNode) -> Q:
+    def _node_to_lucene(self, node: _ParseNode) -> Q:
         return node.__query__(tree=self.tree, optional_fields=self.optional_fields)
 
     def parse_ast(self, raw_query: str) -> ASTNode:
-        return self.parse(raw_query).__ast__()
+        return self._parse(raw_query).__ast__()
 
     def format(self, node: ASTNode) -> str:
         if isinstance(node, AtomNode):

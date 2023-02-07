@@ -1,3 +1,7 @@
+"""
+Classes and methods for running retrieval experiments.
+"""
+
 import hashlib
 import json
 import uuid
@@ -8,6 +12,7 @@ from typing import List, Dict
 
 import ir_measures
 from ir_measures import Measure, Recall, Precision, SetF, ScoredDoc
+from lupyne import engine
 from tqdm import tqdm
 
 import pybool_ir
@@ -19,9 +24,17 @@ from pybool_ir.query.pubmed.parser import PubmedQueryParser, Q
 
 
 class LuceneSearcher(ABC):
+    """
+    Basic wrapper around a lucene index that provides a simple interface for searching.
+    This class can be used as a context manager, which will automatically open and close the index.
+    It is possible to directly use this class to do experiments, but the other classes in this module provide a more convenient interface.
+    """
+
     def __init__(self, indexer: Indexer):
+        #: The pybool_ir `pybool_ir.index.index.Indexer` class that is used to open the index.
         self.indexer = indexer
-        self.index = None
+        #: The underlying lucene index.
+        self.index: engine.Indexer
 
     # The following two methods provide the `with [..] as [..]` syntax.
     def __enter__(self):
@@ -35,6 +48,29 @@ class LuceneSearcher(ABC):
 
 
 class RetrievalExperiment(LuceneSearcher):
+    """
+    This class provides a convenient interface for running retrieval experiments.
+    It can be used as a context manager, which will automatically open and close the index.
+    This class should be used for simple experiments where a collection of queries is executed on the index, for example:
+
+    >>> from pybool_ir.experiments.collections import load_collection
+    >>> from pybool_ir.experiments.retrieval import RetrievalExperiment
+    >>> from pybool_ir.index.pubmed import PubmedIndexer
+    >>> from ir_measures import *
+    >>> import ir_measures
+    >>>
+    >>> # Automatically downloads, then loads this collection.
+    >>> collection = load_collection("ielab/sysrev-seed-collection")
+    >>> # Point the experiment to your index, your collection.
+    >>> with RetrievalExperiment(PubmedIndexer(index_path="pubmed"),
+    ...                                        collection=collection) as experiment:
+    ...     # Get the run of the experiment.
+    ...     # This automatically executes the queries.
+    ...     run = experiment.run
+    >>> # Evaluate the run using ir_measures.
+    >>> ir_measures.calc_aggregate([SetP, SetR, SetF], collection.qrels, run)
+    """
+
     def __init__(self, indexer: Indexer, collection: Collection,
                  query_parser: QueryParser = PubmedQueryParser(),
                  eval_measures: List[Measure] = None,
@@ -160,6 +196,12 @@ class RetrievalExperiment(LuceneSearcher):
         self._run = scored_docs
         return self._run
 
+    def go(self) -> None:
+        """
+        Run the experiment without returning anything.
+        """
+        self._retrieval()
+
     # Helper methods for evaluating the run.
     # Note that the evaluation methods are part of the "experiment".
     def results(self, aggregate: bool = True):
@@ -192,6 +234,15 @@ class RetrievalExperiment(LuceneSearcher):
 def AdHocExperiment(indexer: Indexer, raw_query: str = None,
                     query_parser: QueryParser = PubmedQueryParser(),
                     date_from="1900/01/01", date_to="3000/01/01", ignore_dates: bool = False, date_field: str = "dp") -> RetrievalExperiment:
+    """
+    Unlike the `RetrievalExperiment` class, which expects a `Collection` object, this class allows for ad-hoc queries to be run, for example:
+
+    >>> from pybool_ir.experiments.retrieval import AdHocExperiment
+    >>> from pybool_ir.index.pubmed import PubmedIndexer
+    >>>
+    >>> with AdHocExperiment(PubmedIndexer(index_path="pubmed"), raw_query="headache[tiab]") as experiment:
+    >>>     print(experiment.count())
+    """
     collection = Collection("adhoc", [], [])
     if raw_query is not None:
         collection = Collection("adhoc", [Topic(identifier="0",
