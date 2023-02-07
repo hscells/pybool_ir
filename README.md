@@ -16,11 +16,13 @@ For dependency and environment management, I've decided to use pipenv. Please re
 
 ### pylucene
 
-There is a bit of a barrier to entry at the moment in using this library. That is because many sub-packages, particularly the indexing and querying facilities, depend on the [pylucene](https://lucene.apache.org/pylucene/) library. Unfortunately there is some manual intervention that needs to be performed before you use `pybool_ir`. I have tried to make this process as painless as possible, and it should work for mac and linux people. 
+There is a bit of a barrier to entry at the moment in using this library. That is because many sub-packages, particularly the indexing and querying facilities, depend on the [pylucene](https://lucene.apache.org/pylucene/) library. Unfortunately there is some manual intervention that needs to be performed before you use `pybool_ir`. I have tried to make this process as painless as possible, and it should work for mac and linux people.
 
  1. Run `pipenv shell` to create a new environment in this directory.
  2. Run the `install_pylucene.sh` script. This will attempt to download all the necessary files, move them to the correct spots, and then create the Python `.whl` file that contains the lucene python package (pylucene). It also installs this package into the pipenv environment (for local development). If you are using another environment manager you should install the `.whl` file that contains pylucene and then install the pybool_ir package (e.g., using the `setup.py`). If the installation with pipenv fails, then you need to edit the path to pylucene in the Pipfile.
- 4. Activate your environment with `pipenv shell`. If this fails, then something has gone wrong. 
+ 3. Activate your environment with `pipenv shell`. If this fails, then something has gone wrong. 
+
+Alternatively, we provide a Dockerfile for building a reproducible Docker image. Simply run `docker build -t pybool_ir ./docker` to build the image and run `docker run --rm pybool_ir bash -i` to start a container.
 
 ### Downloading and indexing Pubmed
 
