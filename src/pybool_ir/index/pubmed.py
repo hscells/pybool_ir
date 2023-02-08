@@ -4,12 +4,11 @@ Off-the-shelf indexer for PubMed articles.
 
 import calendar
 import gzip
-import json
 import os
 import xml.etree.ElementTree as et
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple, Iterable, Dict, Any, Callable
+from typing import List, Tuple, Iterable
 from xml.etree.ElementTree import Element
 
 import lucene

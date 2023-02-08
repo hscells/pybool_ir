@@ -14,7 +14,7 @@ have been applied to this file. It is mostly original.
 
 import re
 
-from pybool_ir.query import PubmedQueryParser
+from pybool_ir.query.pubmed.parser import PubmedQueryParser
 
 
 def _Convert_OVID_To_PUBMED(q_OVID):

@@ -17,12 +17,16 @@ from dataclasses_json import dataclass_json
 from ir_measures import Qrel
 
 from pybool_ir import util
-from pybool_ir.query import ovid, PubmedQueryParser
+from pybool_ir.query import ovid
+from pybool_ir.query.pubmed.parser import PubmedQueryParser
 from pybool_ir.query.ast import OperatorNode
 
 _GITHASH_CLEFTAR = "8ce8a63bebb7d88f42dc1abad3e5744e315d07ae"
 _package_name = "pybool_ir"
-_base_dir = Path(appdirs.user_data_dir(_package_name))
+try:
+    _base_dir = Path(appdirs.user_data_dir(_package_name))
+except:
+    _base_dir = Path("./data/")
 
 
 @dataclass_json

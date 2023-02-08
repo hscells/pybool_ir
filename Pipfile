@@ -39,5 +39,7 @@ collection = "*"
 flatdict = "*"
 statsmodels = "*"
 networkx = "*"
+sphinx = "*"
+furo = "*"
 
 [dev-packages]

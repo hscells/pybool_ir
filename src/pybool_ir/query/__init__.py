@@ -1,7 +1,7 @@
 """
 Provides all the functionality for parsing queries. The main purpose of this module is to translate custom query syntax into Lucene syntax, for example:
 
->>> from pybool_ir.query import PubmedQueryParser
+>>> from pybool_ir.query.pubmed.parser import PubmedQueryParser
 >>>
 >>> query = '''("Acne Vulgaris"[Mesh] OR Acne[tiab] OR Blackheads[tiab] OR Whiteheads[tiab] OR Pimples[tiab]) AND ("Phototherapy"[Mesh] OR "Blue light"[tiab] OR Phototherapy[tiab] OR Phototherapies[tiab] OR "Photoradiation therapy"[tiab] OR "Photoradiation Therapies"[tiab] OR "Light Therapy"[tiab] OR "Light Therapies"[tiab]) AND (Randomized controlled trial[pt] OR controlled clinical trial[pt] OR randomized[tiab] OR randomised[tiab] OR placebo[tiab] OR "drug therapy"[sh] OR randomly[tiab] OR trial[tiab] OR groups[tiab]) NOT (Animals[Mesh] not (Animals[Mesh] and Humans[Mesh]))'''
 >>> parser = PubmedQueryParser()
@@ -14,3 +14,4 @@ Note that in this instance, the `pybool_ir.query.pubmed.parser.PubmedQueryParser
 from .pubmed.parser import PubmedQueryParser
 from .generic.parser import GenericQueryParser
 
+__all__ = ["PubmedQueryParser", "GenericQueryParser"]

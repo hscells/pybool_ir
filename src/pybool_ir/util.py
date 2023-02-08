@@ -77,7 +77,7 @@ def download_file(url: str, download_to: Path):
     """
     Helper function that downloads a file from a URL and shows a progress bar.
     """
-    r = requests.get(url, stream=True)
+    r = requests.get(url, stream=True, headers={'Accept-Encoding': None})
     size = int(r.headers.get("content-length"))
     with ProgressFile(download_to, "wb", max_value=size) as f:
         for chunk in r.iter_content(chunk_size=128):

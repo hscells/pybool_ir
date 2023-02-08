@@ -5,3 +5,5 @@ It also includes generic and off-the-shelf indexing pipelines.
 """
 
 from .index import Indexer
+
+__all__ = ["Indexer"]

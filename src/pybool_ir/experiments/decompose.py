@@ -17,13 +17,11 @@ c 10
 d 1000
 
 """
-import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Callable
 
-import appdirs
 import lucene
 from ir_measures import ScoredDoc, Measure
 from lupyne import engine
@@ -32,7 +30,7 @@ from tqdm import tqdm
 
 from pybool_ir.experiments.collections import Topic, Collection
 from pybool_ir.experiments.retrieval import RetrievalExperiment
-from pybool_ir.index import Indexer
+from pybool_ir.index.index import Indexer
 from pybool_ir.query.ast import ASTNode, OperatorNode, AtomNode
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.pubmed.parser import PubmedQueryParser

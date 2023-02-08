@@ -5,8 +5,8 @@ It also includes ways to automatically download and process datasets.
 
 An example of what is possible with this module:
 
->>> from pybool_ir.experiments.collections import load_collection
 >>> from pybool_ir.experiments.retrieval import RetrievalExperiment
+>>> from pybool_ir.experiments.collections import load_collection
 >>> from pybool_ir.index.pubmed import PubmedIndexer
 >>> from ir_measures import *
 >>> import ir_measures
@@ -22,3 +22,4 @@ An example of what is possible with this module:
 >>> # Evaluate the run using ir_measures.
 >>> ir_measures.calc_aggregate([SetP, SetR, SetF], collection.qrels, run)
 """
+

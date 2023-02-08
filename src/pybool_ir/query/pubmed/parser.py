@@ -21,7 +21,7 @@ from pyparsing import (
     CaselessKeyword,
     Suppress, infix_notation, OpAssoc, Group, Literal, Combine, OneOrMore, nums, White, PrecededBy)
 
-from pybool_ir.data.pubmed import MeSHTree
+from pybool_ir.datasets.pubmed.mesh import MeSHTree
 from pybool_ir.query.parser import MAX_CLAUSES
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.ast import OperatorNode, AtomNode, ASTNode

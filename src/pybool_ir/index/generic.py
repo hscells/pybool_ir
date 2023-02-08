@@ -47,8 +47,8 @@ class JsonlIndexer(Indexer):
 class JsonldIndexer(JsonlIndexer):
     """
     Generic indexer for JSONLD files. The JSONLD file should contain one JSON object per line.
-    This indexer assumes that the first line of the file is the document ID, and the second line is the document data.
-    This class can be used to index data in the same way ElasticSearch does.
+    This indexer assumes that the first line of the file is the document ID, and the second line is the document datasets.
+    This class can be used to index datasets in the same way ElasticSearch does.
 
     Each document must have an `id` and `date` field.
     """

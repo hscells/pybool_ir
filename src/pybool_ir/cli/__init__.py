@@ -46,7 +46,7 @@ def generic():
     help="location to download Pubmed baseline"
 )
 def pubmed_download(baseline_path: Path):
-    from pybool_ir.data.pubmed import download_baseline
+    from pybool_ir.datasets.pubmed import download_baseline
     download_baseline(Path(baseline_path))
 
 
@@ -178,7 +178,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
     help="location to write processed file"
 )
 def csur_process(raw_path: Path, output_path: Path):
-    from pybool_ir.data.csur.parser import read_folder
+    from pybool_ir.datasets.csur.parser import read_folder
     with open(Path(output_path), "w") as f:
         for review in read_folder(Path(raw_path)):
             f.write(f"{review.to_json()}\n")
