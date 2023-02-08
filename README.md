@@ -1,14 +1,15 @@
 # pybool_ir
 
-This repository contains many related tools and libraries for the development of systematic review automation research, focusing on [Information Retrieval](https://en.wikipedia.org/wiki/Information_retrieval) methods. This library is broken into various packages to meet the needs of different research goals. Currently, the packages are organised as follows:
+This repository contains many related tools and libraries for the development of systematic review automation research, focusing on [Information Retrieval](https://en.wikipedia.org/wiki/Information_retrieval) methods. This library is broken into various packages to meet the needs of different research goals. Some notable modules include:
 
- - `pubmed`: Used for indexing and querying [Pubmed](https://pubmed.ncbi.nlm.nih.gov/) data. This package can create clean-room design [lucene](https://lucene.apache.org/) indexes that attempt to totally replicate how Pubmed indexes documents.
  - `query`: Used for parsing and performing operations on Pubmed queries. Included in this package is a query parser that translates Pubmed queries into equivalent lucene queries. The queries aim to replicate the search process of Pubmed. One can also use this package to perform various operations on Pubmed queries using the parsed [AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree).
  - `experiments`: This package wraps many implementation details of the above packages and provides an easy way to do retrieval experiments. This package also contains methods for downloading and using test collections that have been created for IR-focused systematic review research.
 
 ## Getting started
 
 This library is still under much development, and I haven't yet begun to go through the process that makes installation easier. You are usually better off at the moment installing everything below and then running your notebooks within the environment that is created.
+
+Once you have everything installed, you can browse the [documentation](https://scells.me/pybool_ir/) for more information on using the library.
 
 ### pipenv
 
@@ -72,6 +73,5 @@ I am planning to have some more comprehensive documentation of all the packages 
 
 ## Roadmap
  
-[x]Get indexing and searching as close as possible to Pubmed.
- - Build out the experiment package to provide stubs for experiments other than ad hoc retrieval (think: classification, seed driven document ranking, etc.).
- - Get and indexing pipeline for more collections, like PMC and Cochrane.
+ - [ ] Get and indexing pipeline for more collections, like PMC and Cochrane.
+ - [ ] Add more documentation, with examples.
