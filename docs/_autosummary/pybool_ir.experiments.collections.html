@@ -181,6 +181,7 @@
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.document.html">pybool_ir.index.document</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.generic.html">pybool_ir.index.generic</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.index.html">pybool_ir.index.index</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.ir_datasets.html">pybool_ir.index.ir_datasets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.pubmed.html">pybool_ir.index.pubmed</a></li>
 </ul>
 </li>
@@ -248,7 +249,10 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#pybool_ir.experiments.collections.load_collection" title="pybool_ir.experiments.collections.load_collection"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_collection</span></code></a>(name)</p></td>
 <td><p>Given the name of a collection, load it from disk.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#pybool_ir.experiments.collections.parse_clef_tar_topic" title="pybool_ir.experiments.collections.parse_clef_tar_topic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_clef_tar_topic</span></code></a>(topic_str[, date_from, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#pybool_ir.experiments.collections.load_collection_ir_datasets" title="pybool_ir.experiments.collections.load_collection_ir_datasets"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_collection_ir_datasets</span></code></a>(name)</p></td>
+<td><p>Load a collection from the ir_datasets package.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pybool_ir.experiments.collections.parse_clef_tar_topic" title="pybool_ir.experiments.collections.parse_clef_tar_topic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_clef_tar_topic</span></code></a>(topic_str[, date_from, ...])</p></td>
 <td><p>Helper function that parses a topic from the CLEF TAR collection.</p></td>
 </tr>
 </tbody>
@@ -299,6 +303,12 @@ This ensures a common format for all collections. This method loads a collection
 <span class="sig-prename descclassname"><span class="pre">pybool_ir.experiments.collections.</span></span><span class="sig-name descname"><span class="pre">load_collection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pybool_ir.experiments.collections.Collection" title="pybool_ir.experiments.collections.Collection"><span class="pre">Collection</span></a></span></span><a class="headerlink" href="#pybool_ir.experiments.collections.load_collection" title="Permalink to this definition">#</a></dt>
 <dd><p>Given the name of a collection, load it from disk. A collection contains a list of topics and a list of qrels.
 The actual documents for a collection are handled separately.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="pybool_ir.experiments.collections.load_collection_ir_datasets">
+<span class="sig-prename descclassname"><span class="pre">pybool_ir.experiments.collections.</span></span><span class="sig-name descname"><span class="pre">load_collection_ir_datasets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#pybool_ir.experiments.collections.Collection" title="pybool_ir.experiments.collections.Collection"><span class="pre">Collection</span></a></span></span><a class="headerlink" href="#pybool_ir.experiments.collections.load_collection_ir_datasets" title="Permalink to this definition">#</a></dt>
+<dd><p>Load a collection from the ir_datasets package.</p>
 </dd></dl>
 
 <dl class="py function">
@@ -375,6 +385,7 @@ These files are in a non-standard TREC format, so this function is used to parse
 </ul>
 </li>
 <li><a class="reference internal" href="#pybool_ir.experiments.collections.load_collection"><code class="docutils literal notranslate"><span class="pre">load_collection()</span></code></a></li>
+<li><a class="reference internal" href="#pybool_ir.experiments.collections.load_collection_ir_datasets"><code class="docutils literal notranslate"><span class="pre">load_collection_ir_datasets()</span></code></a></li>
 <li><a class="reference internal" href="#pybool_ir.experiments.collections.parse_clef_tar_topic"><code class="docutils literal notranslate"><span class="pre">parse_clef_tar_topic()</span></code></a></li>
 </ul>
 </li>
