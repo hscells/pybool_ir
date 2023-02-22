@@ -9,6 +9,8 @@ import lucene
 from lupyne import engine
 from tqdm.auto import tqdm
 from abc import ABC, abstractmethod
+# noinspection PyUnresolvedReferences
+from org.apache.lucene import analysis, index
 
 from pybool_ir.index.document import Document
 
@@ -50,6 +52,7 @@ class Indexer(ABC):
         try:
             self.index.add(doc)
         except Exception as e:
+            print("something was wrong with this document:")
             print(doc)
             raise e
 
@@ -104,7 +107,7 @@ class Indexer(ABC):
                     self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields)
 
     def __enter__(self):
-        self.index = engine.Indexer(directory=str(self.index_path), nrt=True, )
+        self.index = engine.Indexer(directory=str(self.index_path), nrt=True)
         self._set_index_fields()
         self.set_index_fields(store_fields=self.store_fields)
         return self

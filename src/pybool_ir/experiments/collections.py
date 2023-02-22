@@ -13,6 +13,7 @@ from typing import List
 
 import appdirs
 import ir_measures
+import ir_datasets
 from dataclasses_json import dataclass_json
 from ir_measures import Qrel
 
@@ -88,7 +89,52 @@ def load_collection(name: str) -> Collection:
     Given the name of a collection, load it from disk. A collection contains a list of topics and a list of qrels.
     The actual documents for a collection are handled separately.
     """
+    if name.startswith("ird:"):
+        return load_collection_ir_datasets(name[4:])
     return __collection_load_methods[name](name)
+
+
+def load_collection_ir_datasets(name: str) -> Collection:
+    """
+    Load a collection from the ir_datasets package.
+    """
+    dataset = ir_datasets.load(name)
+    assert dataset.has_qrels()
+    assert dataset.has_queries()
+    assert dataset.queries_cls() is ir_datasets.formats.TrecQuery or \
+           dataset.queries_cls() is ir_datasets.formats.GenericQuery
+    assert dataset.qrels_cls() is ir_datasets.formats.TrecQrel or \
+           dataset.qrels_cls() is ir_datasets.formats.GenericQrel
+    download_dir = _base_dir / "collections" / name
+    topic_file = download_dir / "topics.jsonl"
+    qrels_file = download_dir / "qrels"
+
+    if not download_dir.exists():
+        os.makedirs(download_dir, exist_ok=True)
+
+        with open(topic_file, "w") as f:
+            if dataset.queries_cls() is ir_datasets.formats.TrecQuery:
+                for query in dataset.queries_iter():
+                    f.write(Topic(identifier=query.query_id,
+                                  description=query.description,
+                                  raw_query=query.title.replace("\n",""),
+                                  date_from="",
+                                  date_to="").to_json() + "\n")
+            elif dataset.queries_cls() is ir_datasets.formats.GenericQuery:
+                for query in dataset.queries_iter():
+                    f.write(Topic(identifier=query.query_id,
+                                  description="",
+                                  raw_query=query.text.replace("\n",""),
+                                  date_from="",
+                                  date_to="").to_json() + "\n")
+
+        with open(qrels_file, "w") as f:
+            if dataset.qrels_cls() is ir_datasets.formats.TrecQrel or \
+                    dataset.qrels_cls() is ir_datasets.formats.GenericQrel:
+                for qrel in dataset.qrels_iter():
+                    f.write(f"{qrel.query_id} 0 {qrel.doc_id} {qrel.relevance}\n")
+
+    return Collection.from_dir(download_dir)
 
 
 def parse_clef_tar_topic(topic_str: str, date_from: str = "1940", date_to: str = "2017", parse_query: bool = False) -> Topic:

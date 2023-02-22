@@ -103,25 +103,16 @@ class GenericSearcher(Indexer, SearcherMixin):
         hits = self.index.search(query, scores=False, mincount=n_hits)
         print(f"hits: {len(hits)}")
         for hit in hits[:n_hits]:
+            print("--------------------")
             if self.store_fields:
-                with self.index as searcher:
-                    doc = searcher.document(hit["id"])
-                    print(doc)
-                article: Document = Document.from_dict(hit.dict("mesh_heading_list",
-                                                                "mesh_qualifier_list",
-                                                                "mesh_major_heading_list",
-                                                                "supplementary_concept_list",
-                                                                "keyword_list",
-                                                                "publication_type"))
-                print(hit_formatter.format(id=article.id,
-                                           title=article.title,
-                                           date=article.date,
-                                           mesh_heading_list=article.mesh_heading_list,
-                                           mesh_qualifier_list=article.mesh_qualifier_list,
-                                           supplementary_concept_list=article.supplementary_concept_list,
-                                           keyword_list=article.keyword_list,
-                                           publication_type=article.publication_type,
-                                           mesh_major_heading_list=article.mesh_major_heading_list))
+                doc = hit.dict()
+                del doc["__id__"]
+                del doc["__score__"]
+                for k, v in doc.items():
+                    if isinstance(v, str):
+                        if len(v) > 32:
+                            v = f"{v[:32]}..."
+                    print(f"{k}: {v}")
             else:
                 article = Document.from_dict(hit.dict())
                 print(hit_formatter.format(id=article.id))

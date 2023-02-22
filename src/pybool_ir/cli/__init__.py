@@ -3,11 +3,14 @@ Command line interface for pybool_ir.
 """
 
 from pathlib import Path
+from typing import List
 
 import click
 from tqdm.auto import tqdm
 
 import pybool_ir
+from pybool_ir.index.generic import GenericSearcher
+from pybool_ir.query import GenericQueryParser
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
@@ -32,7 +35,17 @@ def csur():
 
 @cli.group()
 def generic():
-    """Generic commands for indexing and searching arbitrary document collections."""
+    """Commands for indexing and searching arbitrary collections."""
+
+
+@cli.group()
+def ir_datasets():
+    """Commands for working with collections in ir_datasets."""
+
+
+@cli.group()
+def experiment():
+    """Commands for doing experiments."""
 
 
 @pubmed.command("download")
@@ -46,7 +59,7 @@ def generic():
     help="location to download Pubmed baseline"
 )
 def pubmed_download(baseline_path: Path):
-    from pybool_ir.datasets.pubmed import download_baseline
+    from pybool_ir.datasets.pubmed.baseline import download_baseline
     download_baseline(Path(baseline_path))
 
 
@@ -109,6 +122,99 @@ def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
     from pybool_ir.index.pubmed import PubmedIndexer
     with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
         ix.bulk_index(Path(baseline_path))
+
+
+@ir_datasets.command("index")
+@click.option(
+    "-c",
+    "--collection-name",
+    "collection_name",
+    type=click.STRING,
+    multiple=False,
+    required=True,
+    help="name of the ir_datasets collection"
+)
+@click.option(
+    "-i",
+    "--index",
+    "index_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to write the lucene index"
+)
+@click.option(
+    "-s",
+    "--store",
+    "store_fields",
+    default=False,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to store fields or not"
+)
+def ir_datasets_index(collection_name: str, index_path: Path, store_fields: bool):
+    from pybool_ir.index.ir_datasets import IRDatasetsIndexer
+    with IRDatasetsIndexer(index_path, collection_name, store_fields=store_fields) as ix:
+        ix.bulk_index()
+
+
+@experiment.command("retrieval")
+@click.option(
+    "-c",
+    "--collection-name",
+    "collection_name",
+    type=click.STRING,
+    multiple=False,
+    required=True,
+    help="name of the ir_datasets collection"
+)
+@click.option(
+    "-i",
+    "--index",
+    "index_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to the lucene index"
+)
+@click.option(
+    "-r",
+    "--run-path",
+    "run_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to write the run file"
+)
+@click.option(
+    "-e",
+    "--evaluation-measures",
+    "evaluation_measures",
+    type=click.STRING,
+    multiple=True,
+    required=False,
+    help="evaluate the run using the specified measures"
+)
+def ir_datasets_experiment(collection_name: str, index_path: Path, run_path: Path, evaluation_measures: List[str]):
+    from pybool_ir.experiments.collections import load_collection
+    from pybool_ir.experiments.retrieval import RetrievalExperiment
+    import ir_measures
+    possible_measures = ir_measures.measures.registry
+    chosen_measures = []
+    for measure in evaluation_measures:
+        if measure not in possible_measures:
+            raise ValueError(f"Invalid evaluation measure {measure}. Possible measures are {possible_measures}")
+        chosen_measures.append(possible_measures[measure])
+
+    collection = load_collection(collection_name)
+    with RetrievalExperiment(GenericSearcher(index_path), collection,
+                             query_parser=GenericQueryParser(),
+                             run_path=run_path,
+                             ignore_dates=True) as exp:
+        run = exp.run
+    if len(chosen_measures) > 0:
+        print(ir_measures.calc_aggregate(chosen_measures, collection.qrels, run))
 
 
 @pubmed.command("search")
@@ -228,4 +334,4 @@ def generic_search(index_path: Path, store_fields: bool):
         while True:
             raw_query = session.prompt("?>", validator=QueryValidator())
             lucene_query = parser.parse_lucene(raw_query)
-            ix.search(lucene_query)
+            ix.search_fmt(lucene_query)

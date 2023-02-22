@@ -13,7 +13,7 @@ from pyparsing import (
     Word,
     alphanums,
     Forward,
-    ParserElement, Literal, Combine, PrecededBy, Group, Suppress, Optional, infix_notation, OpAssoc, CaselessKeyword)
+    ParserElement, Literal, Combine, PrecededBy, Group, Suppress, Optional, infix_notation, OpAssoc, CaselessKeyword, Keyword, OneOrMore, White)
 
 from pybool_ir.query.parser import MAX_CLAUSES
 from pybool_ir.query.ast import AtomNode, ASTNode, OperatorNode
@@ -21,7 +21,7 @@ from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.units import QueryAtom
 
 # ---------------------------------
-DEFAULT_FIELD = "content"
+DEFAULT_FIELD = "contents"
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
@@ -48,9 +48,19 @@ class Atom(ParseNode):
 
     def __query__(self):
         if self.unit.quoted and len(self.unit.analyzed_query.split()) > 1:
-            return Q.near(self.field, *self.unit.analyzed_query.split())
+            return Q.any(*[Q.near(self.field, *self.unit.analyzed_query.split()),
+                           Q.near(self.field, *self.unit.query.split()),
+                           Q.regexp(self.field, self.unit.analyzed_query),
+                           Q.regexp(self.field, self.unit.query),
+                           Q.phrase(self.field, self.unit.analyzed_query),
+                           Q.phrase(self.field, self.unit.query)])
+        elif " " in self.unit.analyzed_query:
+            return Q.any(*[Q.near(self.field, *self.unit.analyzed_query.split(), slop=5),
+                           Q.terms(self.field, self.unit.analyzed_query.split())])
 
-        return Q.term(self.field, self.unit.analyzed_query)
+        return Q.any(*[Q.term(self.field, self.unit.analyzed_query),
+                       Q.regexp(self.field, self.unit.analyzed_query),
+                       Q.phrase(self.field, self.unit.analyzed_query)])
 
     def __ast__(self):
         return AtomNode(query=self.unit.raw_query, field=self.field)
@@ -100,6 +110,7 @@ class GenericQueryParser(QueryParser):
     """
     Implementation of a generic query parser with syntax similar to Lucene's query syntax.
     """
+
     def __init__(self, additional_operators: List[str] = None):
         if additional_operators is None:
             additional_operators = []
@@ -116,21 +127,22 @@ class GenericQueryParser(QueryParser):
             raise e
 
     def parse(self, raw_query: str) -> ParseNode:
+        raw_query = raw_query.translate(str.maketrans("", "", ".-/,()?*'"))
 
         expression = Forward()
 
         # Boolean operators.
         AND, OR, NOT = map(
-            CaselessKeyword, "AND OR NOT".split()
+            Keyword, "AND OR NOT".split()
         )
 
         _valid_phrase = (~PrecededBy(Literal("*")) & (Word(alphanums + " ") ^ Literal("*")))
-        term = (~PrecededBy(Literal("*")) & (Word(alphanums) ^ Literal("*"))).set_parse_action(QueryAtom)
         phrase = Combine(Literal('"') + _valid_phrase + Literal('"')).set_parse_action(QueryAtom)
+        quoteless_phrase = (Combine(OneOrMore(_valid_phrase | White(" ", max=1) + ~(White() | AND | OR | NOT)))).set_parse_action(QueryAtom)
 
         field_restriction = (Suppress(":") + Word(alphanums + "_."))
 
-        atom = Group(((term | phrase) + Optional(field_restriction))).set_parse_action(Atom)
+        atom = Group((quoteless_phrase | phrase) + Optional(field_restriction)).set_parse_action(Atom)
         operators = [(NOT, 2, OpAssoc.RIGHT, NotOp), (OR, 2, OpAssoc.LEFT, BinOp), (AND, 2, OpAssoc.LEFT, BinOp)] + \
                     [(CaselessKeyword(x), 2, OpAssoc.LEFT, UnsupportedOp) for x in self.additional_operators]
         expression << infix_notation(atom, operators)
