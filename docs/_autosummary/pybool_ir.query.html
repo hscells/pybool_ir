@@ -175,6 +175,7 @@
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.collections.html">pybool_ir.experiments.collections</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.decompose.html">pybool_ir.experiments.decompose</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.retrieval.html">pybool_ir.experiments.retrieval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.smooth.html">pybool_ir.experiments.smooth</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="pybool_ir.index.html">pybool_ir.index</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -188,6 +189,7 @@
 <li class="toctree-l2"><a class="reference internal" href="pybool_ir.ml.html">pybool_ir.ml</a></li>
 <li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#">pybool_ir.query</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.query.ast.html">pybool_ir.query.ast</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pybool_ir.query.dsl.html">pybool_ir.query.dsl</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="pybool_ir.query.generic.html">pybool_ir.query.generic</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="pybool_ir.query.generic.parser.html">pybool_ir.query.generic.parser</a></li>
 </ul>
@@ -308,19 +310,22 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="pybool_ir.query.ast.html#module-pybool_ir.query.ast" title="pybool_ir.query.ast"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.ast</span></code></a></p></td>
 <td><p>Base classes for representing queries.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="pybool_ir.query.generic.html#module-pybool_ir.query.generic" title="pybool_ir.query.generic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.generic</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="pybool_ir.query.dsl.html#module-pybool_ir.query.dsl" title="pybool_ir.query.dsl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.dsl</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="pybool_ir.query.generic.html#module-pybool_ir.query.generic" title="pybool_ir.query.generic"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.generic</span></code></a></p></td>
 <td><p>Generic query parser using syntax similar to Lucene's query syntax.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="pybool_ir.query.ovid.html#module-pybool_ir.query.ovid" title="pybool_ir.query.ovid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.ovid</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="pybool_ir.query.ovid.html#module-pybool_ir.query.ovid" title="pybool_ir.query.ovid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.ovid</span></code></a></p></td>
 <td><p>Convert OVID query to single-line PubMed query</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="pybool_ir.query.parser.html#module-pybool_ir.query.parser" title="pybool_ir.query.parser"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.parser</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="pybool_ir.query.parser.html#module-pybool_ir.query.parser" title="pybool_ir.query.parser"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.parser</span></code></a></p></td>
 <td><p>Base classes for representing queries.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="pybool_ir.query.pubmed.html#module-pybool_ir.query.pubmed" title="pybool_ir.query.pubmed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.pubmed</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="pybool_ir.query.pubmed.html#module-pybool_ir.query.pubmed" title="pybool_ir.query.pubmed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.pubmed</span></code></a></p></td>
 <td><p>Implementation of the PubMed query language.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="pybool_ir.query.units.html#module-pybool_ir.query.units" title="pybool_ir.query.units"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.units</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="pybool_ir.query.units.html#module-pybool_ir.query.units" title="pybool_ir.query.units"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pybool_ir.query.units</span></code></a></p></td>
 <td><p>Internal representations for parsing queries.</p></td>
 </tr>
 </tbody>

@@ -1,4 +1,4 @@
-﻿pybool\_ir.experiments.collections
+pybool\_ir.experiments.collections
 ==================================
 
 .. automodule:: pybool_ir.experiments.collections

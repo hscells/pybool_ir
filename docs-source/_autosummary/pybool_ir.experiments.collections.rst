@@ -14,6 +14,7 @@ pybool\_ir.experiments.collections
    .. autosummary::
    
       load_collection
+      load_collection_ir_datasets
       parse_clef_tar_topic
    
    

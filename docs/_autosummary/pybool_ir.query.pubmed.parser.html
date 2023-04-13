@@ -175,18 +175,21 @@
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.collections.html">pybool_ir.experiments.collections</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.decompose.html">pybool_ir.experiments.decompose</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.retrieval.html">pybool_ir.experiments.retrieval</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pybool_ir.experiments.smooth.html">pybool_ir.experiments.smooth</a></li>
 </ul>
 </li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="pybool_ir.index.html">pybool_ir.index</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.document.html">pybool_ir.index.document</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.generic.html">pybool_ir.index.generic</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.index.html">pybool_ir.index.index</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.ir_datasets.html">pybool_ir.index.ir_datasets</a></li>
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.index.pubmed.html">pybool_ir.index.pubmed</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="pybool_ir.ml.html">pybool_ir.ml</a></li>
 <li class="toctree-l2 current has-children"><a class="reference internal" href="pybool_ir.query.html">pybool_ir.query</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.query.ast.html">pybool_ir.query.ast</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pybool_ir.query.dsl.html">pybool_ir.query.dsl</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="pybool_ir.query.generic.html">pybool_ir.query.generic</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="pybool_ir.query.generic.parser.html">pybool_ir.query.generic.parser</a></li>
 </ul>
@@ -241,16 +244,6 @@
           <section id="module-pybool_ir.query.pubmed.parser">
 <span id="pybool-ir-query-pubmed-parser"></span><h1>pybool_ir.query.pubmed.parser<a class="headerlink" href="#module-pybool_ir.query.pubmed.parser" title="Permalink to this heading">#</a></h1>
 <p>Implementation of a PubMed query parser.</p>
-<p class="rubric">Module Attributes</p>
-<div class="table-wrapper autosummary longtable docutils container">
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#pybool_ir.query.pubmed.parser.default_field" title="pybool_ir.query.pubmed.parser.default_field"><code class="xref py py-obj docutils literal notranslate"><span class="pre">default_field</span></code></a></p></td>
-<td><p>The name of the default field that is used when no field is specified.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
 <p class="rubric">Classes</p>
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
@@ -284,12 +277,6 @@
 <dd><p>Parse a raw query into a lucene query.</p>
 </dd></dl>
 
-</dd></dl>
-
-<dl class="py data">
-<dt class="sig sig-object py" id="pybool_ir.query.pubmed.parser.default_field">
-<span class="sig-prename descclassname"><span class="pre">pybool_ir.query.pubmed.parser.</span></span><span class="sig-name descname"><span class="pre">default_field</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'All</span> <span class="pre">Fields'</span></em><a class="headerlink" href="#pybool_ir.query.pubmed.parser.default_field" title="Permalink to this definition">#</a></dt>
-<dd><p>The name of the default field that is used when no field is specified.</p>
 </dd></dl>
 
 </section>
@@ -356,7 +343,6 @@
 <li><a class="reference internal" href="#pybool_ir.query.pubmed.parser.PubmedQueryParser.parse_lucene"><code class="docutils literal notranslate"><span class="pre">PubmedQueryParser.parse_lucene()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#pybool_ir.query.pubmed.parser.default_field"><code class="docutils literal notranslate"><span class="pre">default_field</span></code></a></li>
 </ul>
 </li>
 </ul>

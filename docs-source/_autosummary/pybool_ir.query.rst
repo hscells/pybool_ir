@@ -1,4 +1,4 @@
-pybool\_ir.query
+﻿pybool\_ir.query
 ================
 
 .. automodule:: pybool_ir.query
@@ -28,6 +28,7 @@ pybool\_ir.query
    :recursive:
 
    pybool_ir.query.ast
+   pybool_ir.query.dsl
    pybool_ir.query.generic
    pybool_ir.query.ovid
    pybool_ir.query.parser

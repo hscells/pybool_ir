@@ -3,10 +3,10 @@
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="pybool_ir.datasets" href="pybool_ir.datasets.html" /><link rel="prev" title="pybool_ir" href="pybool_ir.html" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="pybool_ir.query.generic" href="pybool_ir.query.generic.html" /><link rel="prev" title="pybool_ir.query.ast" href="pybool_ir.query.ast.html" />
 
     <!-- Generated with Sphinx 6.1.3 and Furo 2022.12.07 -->
-        <title>pybool_ir.cli - pybool_ir documentation</title>
+        <title>pybool_ir.query.dsl - pybool_ir documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=91d0f0d1c444bdcb17a68e833c7a53903343c195" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
@@ -134,7 +134,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -156,7 +156,7 @@
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul class="current">
 <li class="toctree-l1 current has-children"><a class="reference internal" href="pybool_ir.html">pybool_ir</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
-<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">pybool_ir.cli</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pybool_ir.cli.html">pybool_ir.cli</a></li>
 <li class="toctree-l2 has-children"><a class="reference internal" href="pybool_ir.datasets.html">pybool_ir.datasets</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l3 has-children"><a class="reference internal" href="pybool_ir.datasets.csur.html">pybool_ir.datasets.csur</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="pybool_ir.datasets.csur.parser.html">pybool_ir.datasets.csur.parser</a></li>
@@ -187,9 +187,9 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="pybool_ir.ml.html">pybool_ir.ml</a></li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="pybool_ir.query.html">pybool_ir.query</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="pybool_ir.query.html">pybool_ir.query</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="pybool_ir.query.ast.html">pybool_ir.query.ast</a></li>
-<li class="toctree-l3"><a class="reference internal" href="pybool_ir.query.dsl.html">pybool_ir.query.dsl</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">pybool_ir.query.dsl</a></li>
 <li class="toctree-l3 has-children"><a class="reference internal" href="pybool_ir.query.generic.html">pybool_ir.query.generic</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
 <li class="toctree-l4"><a class="reference internal" href="pybool_ir.query.generic.parser.html">pybool_ir.query.generic.parser</a></li>
 </ul>
@@ -235,15 +235,97 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main">
-          <section id="module-pybool_ir.cli">
-<span id="pybool-ir-cli"></span><h1>pybool_ir.cli<a class="headerlink" href="#module-pybool_ir.cli" title="Permalink to this heading">#</a></h1>
-<p>Command line interface for pybool_ir.</p>
+          <section id="module-pybool_ir.query.dsl">
+<span id="pybool-ir-query-dsl"></span><h1>pybool_ir.query.dsl<a class="headerlink" href="#module-pybool_ir.query.dsl" title="Permalink to this heading">#</a></h1>
+<p class="rubric">Functions</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">AND</span></code>(*args)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">OR</span></code>(*args)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">auto</span></code>(query[, field])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Classes</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pybool_ir.query.dsl.AtomicQueryObject" title="pybool_ir.query.dsl.AtomicQueryObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AtomicQueryObject</span></code></a>([query, field])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pybool_ir.query.dsl.Op" title="pybool_ir.query.dsl.Op"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Op</span></code></a>(op, *args)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pybool_ir.query.dsl.Phrase" title="pybool_ir.query.dsl.Phrase"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Phrase</span></code></a>(phrase[, field])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pybool_ir.query.dsl.QueryObject" title="pybool_ir.query.dsl.QueryObject"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QueryObject</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#pybool_ir.query.dsl.QueryVisitor" title="pybool_ir.query.dsl.QueryVisitor"><code class="xref py py-obj docutils literal notranslate"><span class="pre">QueryVisitor</span></code></a>(query)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#pybool_ir.query.dsl.Term" title="pybool_ir.query.dsl.Term"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Term</span></code></a>([term, field])</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py class">
+<dt class="sig sig-object py" id="pybool_ir.query.dsl.AtomicQueryObject">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pybool_ir.query.dsl.</span></span><span class="sig-name descname"><span class="pre">AtomicQueryObject</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'contents'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pybool_ir.query.dsl.AtomicQueryObject" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pybool_ir.query.dsl.QueryObject" title="pybool_ir.query.dsl.QueryObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">QueryObject</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="pybool_ir.query.dsl.AtomicQueryObject.__call__">
+<span class="sig-name descname"><span class="pre">__call__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pybool_ir.query.dsl.AtomicQueryObject.__call__" title="Permalink to this definition">#</a></dt>
+<dd><p>Call self as a function.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pybool_ir.query.dsl.Op">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pybool_ir.query.dsl.</span></span><span class="sig-name descname"><span class="pre">Op</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">op</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#pybool_ir.query.dsl.QueryObject" title="pybool_ir.query.dsl.QueryObject"><span class="pre">QueryObject</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pybool_ir.query.dsl.Op" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pybool_ir.query.dsl.QueryObject" title="pybool_ir.query.dsl.QueryObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">QueryObject</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pybool_ir.query.dsl.Phrase">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pybool_ir.query.dsl.</span></span><span class="sig-name descname"><span class="pre">Phrase</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">phrase</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'contents'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pybool_ir.query.dsl.Phrase" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pybool_ir.query.dsl.AtomicQueryObject" title="pybool_ir.query.dsl.AtomicQueryObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">AtomicQueryObject</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pybool_ir.query.dsl.QueryObject">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pybool_ir.query.dsl.</span></span><span class="sig-name descname"><span class="pre">QueryObject</span></span><a class="headerlink" href="#pybool_ir.query.dsl.QueryObject" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pybool_ir.query.dsl.QueryVisitor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pybool_ir.query.dsl.</span></span><span class="sig-name descname"><span class="pre">QueryVisitor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#pybool_ir.query.dsl.QueryObject" title="pybool_ir.query.dsl.QueryObject"><span class="pre">QueryObject</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pybool_ir.query.dsl.QueryVisitor" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pybool_ir.query.dsl.Term">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pybool_ir.query.dsl.</span></span><span class="sig-name descname"><span class="pre">Term</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">term</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'contents'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pybool_ir.query.dsl.Term" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pybool_ir.query.dsl.AtomicQueryObject" title="pybool_ir.query.dsl.AtomicQueryObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">AtomicQueryObject</span></code></a></p>
+</dd></dl>
+
 </section>
 
         </article>
@@ -251,23 +333,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="pybool_ir.datasets.html">
+          <a class="next-page" href="pybool_ir.query.generic.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">pybool_ir.datasets</div>
+                <div class="title">pybool_ir.query.generic</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="pybool_ir.html">
+          <a class="prev-page" href="pybool_ir.query.ast.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">pybool_ir</div>
+                <div class="title">pybool_ir.query.ast</div>
                 
               </div>
             </a>
@@ -289,8 +371,35 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">pybool_ir.query.dsl</a><ul>
+<li><a class="reference internal" href="#pybool_ir.query.dsl.AtomicQueryObject"><code class="docutils literal notranslate"><span class="pre">AtomicQueryObject</span></code></a><ul>
+<li><a class="reference internal" href="#pybool_ir.query.dsl.AtomicQueryObject.__call__"><code class="docutils literal notranslate"><span class="pre">AtomicQueryObject.__call__()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pybool_ir.query.dsl.Op"><code class="docutils literal notranslate"><span class="pre">Op</span></code></a></li>
+<li><a class="reference internal" href="#pybool_ir.query.dsl.Phrase"><code class="docutils literal notranslate"><span class="pre">Phrase</span></code></a></li>
+<li><a class="reference internal" href="#pybool_ir.query.dsl.QueryObject"><code class="docutils literal notranslate"><span class="pre">QueryObject</span></code></a></li>
+<li><a class="reference internal" href="#pybool_ir.query.dsl.QueryVisitor"><code class="docutils literal notranslate"><span class="pre">QueryVisitor</span></code></a></li>
+<li><a class="reference internal" href="#pybool_ir.query.dsl.Term"><code class="docutils literal notranslate"><span class="pre">Term</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
