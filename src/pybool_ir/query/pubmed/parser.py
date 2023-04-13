@@ -325,11 +325,6 @@ class _FieldUnit:
         return fields.mapping[self.field]
 
 
-#: The name of the default field that is used when no field is specified.
-default_field = "All Fields"
-_default_field = _FieldUnit([default_field])
-
-
 # --------------------------------------
 
 
@@ -339,9 +334,14 @@ class PubmedQueryParser(QueryParser):
     """
 
     def __init__(self, tree: MeSHTree = MeSHTree(), optional_fields: List[str] = None, optional_operators: List[str] = None):
+        super().__init__()
         self.tree = tree
         self.optional_fields = optional_fields
         self.optional_operators = optional_operators
+
+    @classmethod
+    def default_field(cls) -> str:
+        return "All Fields"
 
     def _parse(self, raw_query: str) -> _ParseNode:
         # Makes parsing faster. (?)
@@ -409,3 +409,8 @@ class PubmedQueryParser(QueryParser):
             return f"{node.query}[{node.field}]"
         assert isinstance(node, OperatorNode)
         return f"({f' {node.operator.upper()} '.join([str(x) for x in node.children])})"
+
+
+# --------------------------------------
+#: The name of the default field that is used when no field is specified.
+_default_field = _FieldUnit([PubmedQueryParser.default_field])

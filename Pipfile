@@ -41,5 +41,10 @@ statsmodels = "*"
 networkx = "*"
 sphinx = "*"
 furo = "*"
+ir-datasets = "*"
+parsedatetime = "*"
+nmslib = "*"
+pyserini = "==0.20.0"
+faiss-cpu = "*"
 
 [dev-packages]

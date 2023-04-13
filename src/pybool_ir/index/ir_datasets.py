@@ -19,6 +19,7 @@ class IRDatasetsIndexer(Indexer):
     def process_document(self, doc: Document) -> Document:
         return doc
 
+    # noinspection PyMethodOverriding
     def parse_documents(self) -> (Iterable[Document], int):
         def _doc_iter():
             for doc in self.dataset.docs_iter():
@@ -40,6 +41,7 @@ class IRDatasetsIndexer(Indexer):
             if field not in ["id", "date", "contents"]:
                 self.index.set(field, engine.Field.Text, stored=store_fields)
 
+    # noinspection PyMethodOverriding
     def bulk_index(self):
         articles, total = self.parse_documents()
         self._bulk_index(articles, total=total)

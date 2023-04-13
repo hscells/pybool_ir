@@ -21,6 +21,10 @@ class QueryParser(ABC):
     A query parser should be able to parse a raw query into an AST node, and then format that AST node into a lucene query.
     """
 
+    @classmethod
+    def default_field(cls) -> str:
+        return "contents"
+
     @abstractmethod
     def parse_lucene(self, raw_query: str) -> Q:
         """
