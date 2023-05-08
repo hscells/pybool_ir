@@ -95,13 +95,13 @@ class Indexer(ABC):
     def _set_index_fields(self):
         """
         This method sets any optional fields that are specified in the constructor.
-        Fields that start with "@" are stored as strings, while other fields are stored as text.
+        Fields that start with "#" are stored as strings, while other fields are stored as text.
         The difference is that text fields are tokenized, while string fields are not.
         String fields can be used to store arrays of strings, while text fields cannot.
         """
         if self.optional_fields is not None:
             for optional_field_name in self.optional_fields:
-                if optional_field_name.startswith("@"):
+                if optional_field_name.startswith("#"):
                     self.index.set(optional_field_name[1:], engine.Field.String, stored=self.store_fields)
                 else:
                     self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields)
