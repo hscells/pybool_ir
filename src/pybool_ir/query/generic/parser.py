@@ -9,6 +9,8 @@ import lucene
 from lupyne import engine
 # noinspection PyUnresolvedReferences
 from org.apache.lucene import search
+# noinspection PyUnresolvedReferences
+from org.apache.lucene.analysis.en import EnglishAnalyzer
 from pyparsing import (
     Word,
     alphanums,
@@ -44,6 +46,7 @@ class ParseNode(object):
 class Atom(ParseNode):
     def __init__(self, tokens):
         self.unit: QueryAtom = tokens[0][0]
+        self.default_stop_set = ["but", "be", "with", "such", "then", "for", "no", "will", "not", "are", "and", "their", "if", "this", "on", "into", "a", "or", "there", "in", "that", "they", "was", "is", "it", "an", "the", "as", "at", "these", "by", "to", "of"]
         self.field = tokens[0][1] if len(tokens[0]) > 1 else DEFAULT_FIELD
 
     def __query__(self):
@@ -55,8 +58,8 @@ class Atom(ParseNode):
                            Q.phrase(self.field, self.unit.analyzed_query),
                            Q.phrase(self.field, self.unit.query)])
         elif " " in self.unit.analyzed_query:
-            return Q.any(*[Q.near(self.field, *self.unit.analyzed_query.split(), slop=5),
-                           Q.terms(self.field, self.unit.analyzed_query.split())])
+            q = [x for x in self.unit.analyzed_query.split() if x not in self.default_stop_set]
+            return Q.any(*[Q.term(self.field, x) for x in q])
 
         return Q.any(*[Q.term(self.field, self.unit.analyzed_query),
                        Q.regexp(self.field, self.unit.analyzed_query),

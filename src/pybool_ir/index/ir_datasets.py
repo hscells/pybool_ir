@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Iterable, List, Union
 
 import ir_datasets
+from ir_datasets.formats import GenericDoc
 from lupyne import engine
 
 from pybool_ir.index import Indexer
@@ -23,12 +24,19 @@ class IRDatasetsIndexer(Indexer):
     def parse_documents(self) -> (Iterable[Document], int):
         def _doc_iter():
             for doc in self.dataset.docs_iter():
-                d = doc._asdict()
-                if "id" not in d:
-                    d["id"] = doc[0]
-                if "date" not in d:
-                    d["date"] = 0
-                d["contents"] = [v for v in d.values() if isinstance(v, str)]
+                if isinstance(doc, GenericDoc):
+                    d = {
+                        "id": doc.doc_id,
+                        "date": 0,
+                        "contents": doc.text,
+                    }
+                else:
+                    d = doc._asdict()
+                    if "id" not in d:
+                        d["id"] = doc[0]
+                    if "date" not in d:
+                        d["date"] = 0
+                    d["contents"] = [v for v in d.values() if isinstance(v, str)]
                 yield Document.from_dict(d)
 
         return _doc_iter(), self.dataset.docs_count()
