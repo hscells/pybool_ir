@@ -10,7 +10,7 @@ from lupyne import engine
 # noinspection PyUnresolvedReferences
 from org.apache.lucene import search
 # noinspection PyUnresolvedReferences
-from org.apache.lucene.analysis.en import EnglishAnalyzer
+from org.apache.lucene.analysis.en import PorterStemFilter
 from pyparsing import (
     Word,
     alphanums,
@@ -21,6 +21,7 @@ from pybool_ir.query.parser import MAX_CLAUSES
 from pybool_ir.query.ast import AtomNode, ASTNode, OperatorNode
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.units import QueryAtom
+from pybool_ir.util import TypeAsPayloadTokenFilter, StopFilter
 
 # ---------------------------------
 DEFAULT_FIELD = "contents"
@@ -48,6 +49,7 @@ class Atom(ParseNode):
         self.unit: QueryAtom = tokens[0][0]
         self.default_stop_set = ["but", "be", "with", "such", "then", "for", "no", "will", "not", "are", "and", "their", "if", "this", "on", "into", "a", "or", "there", "in", "that", "they", "was", "is", "it", "an", "the", "as", "at", "these", "by", "to", "of"]
         self.field = tokens[0][1] if len(tokens[0]) > 1 else DEFAULT_FIELD
+        self.stemmer = engine.Analyzer.standard(StopFilter, PorterStemFilter, TypeAsPayloadTokenFilter)
 
     def __query__(self):
         if self.unit.quoted and len(self.unit.analyzed_query.split()) > 1:
@@ -58,8 +60,8 @@ class Atom(ParseNode):
                            Q.phrase(self.field, self.unit.analyzed_query),
                            Q.phrase(self.field, self.unit.query)])
         elif " " in self.unit.analyzed_query:
-            q = [x for x in self.unit.analyzed_query.split() if x not in self.default_stop_set]
-            return Q.any(*[Q.term(self.field, x) for x in q])
+            # q = [x for x in self.unit.analyzed_query.split() if x not in self.default_stop_set]
+            return Q.any(*[Q.term(self.field, x) for x in [token.charTerm for token in self.stemmer.tokens(self.unit.analyzed_query)]])
 
         return Q.any(*[Q.term(self.field, self.unit.analyzed_query),
                        Q.regexp(self.field, self.unit.analyzed_query),

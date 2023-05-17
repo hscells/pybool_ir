@@ -4,7 +4,7 @@ Generic indexers and searchers for JSONL and JSONLD files.
 
 import json
 from pathlib import Path
-from typing import List, Iterable
+from typing import List, Iterable, Union
 
 from pybool_ir.index.document import Document
 from pybool_ir.index.index import Indexer, SearcherMixin
@@ -13,6 +13,10 @@ import lucene
 from lupyne import engine
 
 from pybool_ir.query.generic.parser import DEFAULT_FIELD
+from pybool_ir.util import StopFilter, TypeAsPayloadTokenFilter
+
+# noinspection PyUnresolvedReferences
+from org.apache.lucene.analysis.en import PorterStemFilter
 
 assert lucene.getVMEnv() or lucene.initVM()
 
@@ -23,6 +27,12 @@ class JsonlIndexer(Indexer):
 
     Each document must have an `id` and `date` field.
     """
+
+    def __init__(self, index_path: Union[Path, str],
+                 store_fields: bool = True, optional_fields: List[str] = None):
+        super().__init__(index_path, store_fields, optional_fields)
+        # Do some more general purpose analysis.
+        self._analyzer = engine.Analyzer.standard(StopFilter, PorterStemFilter, TypeAsPayloadTokenFilter)
 
     def process_document(self, doc: Document) -> Document:
         assert (doc.has_key("id") and doc.has_key("date"))

@@ -9,6 +9,36 @@ from typing import Union
 
 import progressbar
 import requests
+from lupyne import engine
+
+# noinspection PyUnresolvedReferences
+from org.apache.lucene import analysis
+
+
+class TypeAsPayloadTokenFilter(engine.TokenFilter):
+    """Custom implementation of lucene TypeAsPayloadTokenFilter."""
+
+    def incrementToken(self):
+        result = self.input.incrementToken()
+        self.payload = self.type
+        return result
+
+
+class StopFilter(engine.TokenFilter):
+
+    def __init__(self, input: analysis.TokenStream):
+        super().__init__(input)
+        self.stopwords = ["a", "an", "and", "are", "as", "at", "be", "but", "by",
+                          "for", "if", "in", "into", "is", "it",
+                          "no", "not", "of", "on", "or", "such",
+                          "that", "the", "their", "then", "there", "these",
+                          "they", "this", "to", "was", "will", "with"]
+
+    def incrementToken(self) -> bool:
+        result = self.input.incrementToken()
+        if self.charTerm in self.stopwords:
+            return self.incrementToken()
+        return result
 
 
 class ProgressFile(BufferedRWPair):

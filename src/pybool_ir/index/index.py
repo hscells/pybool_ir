@@ -11,6 +11,8 @@ from tqdm.auto import tqdm
 from abc import ABC, abstractmethod
 # noinspection PyUnresolvedReferences
 from org.apache.lucene import analysis, index
+# noinspection PyUnresolvedReferences
+from org.apache.lucene.search.similarities import BM25Similarity
 
 from pybool_ir.index.document import Document
 
@@ -33,6 +35,10 @@ class Indexer(ABC):
         self.index_path = index_path
         self.store_fields = store_fields
         self.optional_fields = optional_fields
+
+        self._analyzer = analysis.standard.StandardAnalyzer()
+        self.similarity = BM25Similarity()
+
         #: The underlying lucene index.
         self.index: engine.Indexer
 
@@ -106,8 +112,13 @@ class Indexer(ABC):
                 else:
                     self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields)
 
+    def set_similarity(self, sim_cls):
+        self.similarity = sim_cls
+        self.index.setSimilarity(self.similarity)
+
     def __enter__(self):
-        self.index = engine.Indexer(directory=str(self.index_path), nrt=True)
+        self.index = engine.Indexer(directory=str(self.index_path), nrt=True, analyzer=self._analyzer)
+        self.index.setSimilarity(self.similarity)
         self._set_index_fields()
         self.set_index_fields(store_fields=self.store_fields)
         return self

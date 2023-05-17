@@ -7,6 +7,9 @@ from lupyne import engine
 
 from pybool_ir.index import Indexer
 from pybool_ir.index.document import Document
+from pybool_ir.util import TypeAsPayloadTokenFilter, StopFilter
+# noinspection PyUnresolvedReferences
+from org.apache.lucene.analysis.en import PorterStemFilter
 
 
 class IRDatasetsIndexer(Indexer):
@@ -16,6 +19,9 @@ class IRDatasetsIndexer(Indexer):
         super().__init__(index_path, store_fields, optional_fields)
         self.dataset_name = dataset_name
         self.dataset = ir_datasets.load(dataset_name)
+
+        # Do some more general purpose analysis.
+        self._analyzer = engine.Analyzer.standard(StopFilter, PorterStemFilter, TypeAsPayloadTokenFilter)
 
     def process_document(self, doc: Document) -> Document:
         return doc
