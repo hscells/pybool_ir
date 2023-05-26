@@ -37,6 +37,7 @@ class Indexer(ABC):
         self.optional_fields = optional_fields
 
         self._analyzer = analysis.standard.StandardAnalyzer()
+        # See: https://lucene.apache.org/core/9_1_0/core/org/apache/lucene/search/similarities/package-summary.html
         self.similarity = BM25Similarity()
 
         #: The underlying lucene index.
