@@ -19,6 +19,7 @@ from ir_measures import Qrel
 
 from pybool_ir import util
 from pybool_ir.query import ovid
+from pybool_ir.query.ovid import transform
 from pybool_ir.query.pubmed.parser import PubmedQueryParser
 from pybool_ir.query.ast import OperatorNode
 
@@ -117,14 +118,14 @@ def load_collection_ir_datasets(name: str) -> Collection:
                 for query in dataset.queries_iter():
                     f.write(Topic(identifier=query.query_id,
                                   description=query.description,
-                                  raw_query=query.title.replace("\n",""),
+                                  raw_query=query.title.replace("\n", ""),
                                   date_from="",
                                   date_to="").to_json() + "\n")
             elif dataset.queries_cls() is ir_datasets.formats.GenericQuery:
                 for query in dataset.queries_iter():
                     f.write(Topic(identifier=query.query_id,
                                   description="",
-                                  raw_query=query.text.replace("\n",""),
+                                  raw_query=query.text.replace("\n", ""),
                                   date_from="",
                                   date_to="").to_json() + "\n")
 
@@ -469,31 +470,123 @@ def __load_searchrefiner_logs(name: str) -> Collection:
     return Collection.from_dir(download_dir)
 
 
-def __load_update_collection(name: str) -> Collection:
-    import pickle
+def __load_update_collection(name: str, original_or_updated: bool = True, abstract_or_content: bool = True) -> Collection:
     import zipfile
+    import re
+
+    parser = PubmedQueryParser()
+
+    pattern = re.compile(r" \([0-9]+\)$")
 
     git_hash = "35a78b615d9c9dbdd889c55a61e5032b3cc309c6"
-    collection_url = f"https://github.com/Amal-Alharbi/Systematic_Reviews_Update/raw/{git_hash}/update_dataset.pkl.zip"
+    collection_url = f"https://github.com/Amal-Alharbi/Systematic_Reviews_Update/archive/{git_hash}.zip"
     download_dir = _base_dir / "collections" / name
-    pickle_collection = download_dir / "update_dataset.pkl"
-    pickle_collection_zip = download_dir / "update_dataset.pkl.zip"
 
-    print(download_dir)
+    topic_file = download_dir / "topics.jsonl"
+    qrels_file = download_dir / "qrels"
+    raw_collection = download_dir / "raw"
 
     if not download_dir.exists():
         os.makedirs(download_dir, exist_ok=True)
-        util.download_file(collection_url, pickle_collection_zip)
+        util.download_file(collection_url, download_dir / "raw.zip")
 
-        with zipfile.ZipFile(pickle_collection_zip, "r") as z:
-            z.extractall(download_dir)
+        with zipfile.ZipFile(download_dir / "raw.zip", "r") as zip_ref:
+            zip_ref.extractall(download_dir)
 
-    with open(pickle_collection, "rb") as f:
-        reviews = pickle.load(f)
+        # Clean up.
+        os.remove(download_dir / "raw.zip")
+        os.rename(download_dir / f"Systematic_Reviews_Update-{git_hash}", raw_collection)
 
-    # TODO When unpickling, there is a ModuleNotFoundError.
+    with open(topic_file, "w") as f:
+        pubdates = {}
+        topic_info = {}
+        with open(raw_collection / "Reviews-Information" / "Publication_Date", "r") as df:
+            # Skip the first line.
+            next(df)
+            for line in df:
+                topic, original_date, updated_date = line.replace("-", "/").strip().split("\t")
+                pubdates[topic] = (original_date, updated_date)
 
-    raise Exception("Not yet implemented")
+        for file in os.listdir(raw_collection / "Reviews-Information"):
+            if not file.endswith(".txt"):
+                continue
+
+            with open(raw_collection / "Reviews-Information" / file, "r") as df:
+                topic_info[file.split(".")[0]] = " ".join(df.read().strip().split()[1:])
+
+        for file in os.listdir(raw_collection / "Boolean-Queries"):
+            with open(raw_collection / "Boolean-Queries" / file, "r") as qf:
+                topic = file.split(".")[0]
+                # Convert the Ovid MEDLINE query to a PubMed query.
+                raw_query = qf.read().strip()
+                raw_query = raw_query.replace("#", "")
+                if topic == "CD007020":
+                    raw_query = raw_query.replace(".", ". ")
+                if topic in ["CD010847", "CD007428"]:
+                    raw_query = "\n".join(raw_query.split("\n")[:-2])
+                if topic == "CD001298":
+                    raw_query = raw_query.replace("‐", "-")  # Yup -- really!
+                    raw_query = "\n".join(raw_query.split("\n")[:-2])
+                if topic in ["CD006839", "CD005055", "CD000523", "CD005025"]:
+                    raw_query = "\n".join(raw_query.split("\n")[:-1])
+
+                if topic in ["CD005607", "CD008127", "CD002733"]:
+                    raw_query = raw_query.replace("{", "(").replace("}", ")")
+                    pubmed_query = raw_query
+                else:
+                    # Remove the trailing number in the query.
+                    raw_query = pattern.sub("", raw_query)
+                    pubmed_query = transform(raw_query)
+
+                print(topic)
+                print(pubmed_query)
+                parser.parse_lucene(pubmed_query)
+
+                pubdate = pubdates[topic][1]
+                if original_or_updated:
+                    pubdate = pubdates[topic][0]
+                f.write(Topic(identifier=topic,
+                              description=topic_info[topic],
+                              raw_query=pubmed_query,
+                              date_from="1900/01/01",
+                              date_to=pubdate).to_json() + "\n")
+
+        with open(qrels_file, "w") as f:
+            folder_name = "abstract_level"
+            if abstract_or_content:
+                folder_name = "content_level"
+
+            for file in os.listdir(raw_collection / "Included-PMIDs" / folder_name):
+                if original_or_updated:
+                    ending = ".original.txt"
+                else:
+                    ending = ".updated.txt"
+
+                if not file.endswith(ending):
+                    continue
+
+                with open(raw_collection / "Included-PMIDs" / folder_name / file, "r") as qf:
+                    topic = file.split(".")[0]
+                    for line in qf:
+                        f.write(f'{topic} 0 {line.strip()} {1}\n')
+
+    return Collection.from_dir(download_dir)
+
+
+def __load_update_collection_original_abstract(name: str) -> Collection:
+    return __load_update_collection(name, True, True)
+
+
+def __load_update_collection_original_content(name: str) -> Collection:
+    return __load_update_collection(name, True, False)
+
+
+def __load_update_collection_updated_abstract(name: str) -> Collection:
+    return __load_update_collection(name, False, True)
+
+
+def __load_update_collection_updated_content(name: str) -> Collection:
+    return __load_update_collection(name, False, False)
 
 
 __collection_load_methods = {
@@ -519,7 +612,10 @@ __collection_load_methods = {
     # -------------------------------------------------------------------------------------------
     # Other possible datasets include:
     # - https://github.com/Amal-Alharbi/Systematic_Reviews_Update (but no Pubmed queries)
-    "amal-alharbi/systematic-reviews-update": __load_update_collection
+    "amal-alharbi/systematic-reviews-update/original/abstract": __load_update_collection_original_abstract,
+    "amal-alharbi/systematic-reviews-update/original/content": __load_update_collection_original_content,
+    "amal-alharbi/systematic-reviews-update/updated/abstract": __load_update_collection_updated_abstract,
+    "amal-alharbi/systematic-reviews-update/updated/content": __load_update_collection_updated_content,
     # - https://github.com/ielab/SIGIR2017-SysRev-Collection (only about a dozen Pubmed queries from 125 in total)
     # -------------------------------------------------------------------------------------------
 

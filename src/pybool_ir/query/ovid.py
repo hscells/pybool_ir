@@ -247,16 +247,16 @@ def _convert_to_one_line(query):
 
     for key, value in q.items():
         terms = value.replace('(', '').replace(')', '').split()
-        temp = value.replace('(', '').replace(')', '')
+        a = [a for a in terms]
 
         # replace each number with the equivalent line
         for j, term in enumerate(terms):
             if terms[j].isdigit() and (terms[j - 1].lower() in operations or terms[j + 1].lower() in operations):
                 index = terms[j]
-                temp = temp.replace(str(index), q[int(index)])
-        temp = temp.replace('1(', '(')
+                # [HS] This method is slightly less fragile than the previous one.
+                a[j] = q[int(index)]
 
-        q[key] = '( ' + temp + ' )'
+        q[key] = '( ' + " ".join(a) + ' )'
 
     return q
 

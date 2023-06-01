@@ -7,6 +7,7 @@ This repository contains many related tools and libraries for the development of
 
 ## Getting started
 
+**UPDATE!** I've started another project that pre-builds pylucene for you, making it pip-installable. Unfortunately due to limitations in the Python packaging ecosystem, it's still not as easy as `pip install pylucene`... For installation instructions, see: [pylucene-packaged](https://github.com/hscells/pylucene-packaged).
 
 The following instructions will get you a copy of the project up and running on your local machine for development and research purposes. The project can currently be installed locally, or using a docker image. We are still working on getting the library easily installable via PyPI.
 

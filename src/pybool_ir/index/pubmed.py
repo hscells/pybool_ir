@@ -30,6 +30,7 @@ class PubmedArticle(Document):
     """
     This is a special override of the Document class for PubMed articles. The constructor takes in all the fields that are required for PubMed articles.
     """
+
     def __init__(self, id: str, date: datetime, title: str, abstract: str,
                  publication_type: List[str], mesh_heading_list: List[str],
                  mesh_qualifier_list: List[str], mesh_major_heading_list: List[str],

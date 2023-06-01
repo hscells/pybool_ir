@@ -13,6 +13,7 @@ mapping = {
     "all": ["all_fields"],  # Might be unofficial?
     "Title/Abstract": ["title", "abstract"],
     "tiab": ["title", "abstract"],
+    "TIAB": ["title", "abstract"],
     "Title": ["title"],
     "ti": ["title"],
     "Abstract": ["abstract"],
@@ -32,6 +33,7 @@ mapping = {
 
     "sh": ["mesh_qualifier_list"],
     "Subheading": ["mesh_qualifier_list"],
+    "MeSH Subheading": ["mesh_qualifier_list"],
 
     "MAJR": ["mesh_major_heading_list"],
     "Majr": ["mesh_major_heading_list"],

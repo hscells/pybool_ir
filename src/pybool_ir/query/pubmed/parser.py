@@ -413,4 +413,4 @@ class PubmedQueryParser(QueryParser):
 
 # --------------------------------------
 #: The name of the default field that is used when no field is specified.
-_default_field = _FieldUnit([PubmedQueryParser.default_field])
+_default_field = _FieldUnit([PubmedQueryParser.default_field()])

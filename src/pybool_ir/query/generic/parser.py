@@ -53,19 +53,9 @@ class Atom(ParseNode):
 
     def __query__(self):
         if self.unit.quoted and len(self.unit.analyzed_query.split()) > 1:
-            return Q.any(*[Q.near(self.field, *self.unit.analyzed_query.split()),
-                           Q.near(self.field, *self.unit.query.split()),
-                           Q.regexp(self.field, self.unit.analyzed_query),
-                           Q.regexp(self.field, self.unit.query),
-                           Q.phrase(self.field, self.unit.analyzed_query),
-                           Q.phrase(self.field, self.unit.query)])
-        elif " " in self.unit.analyzed_query:
-            # q = [x for x in self.unit.analyzed_query.split() if x not in self.default_stop_set]
+            return Q.any(*[Q.regexp(self.field, self.unit.query)])
+        else:
             return Q.any(*[Q.term(self.field, x) for x in [token.charTerm for token in self.stemmer.tokens(self.unit.analyzed_query)]])
-
-        return Q.any(*[Q.term(self.field, self.unit.analyzed_query),
-                       Q.regexp(self.field, self.unit.analyzed_query),
-                       Q.phrase(self.field, self.unit.analyzed_query)])
 
     def __ast__(self):
         return AtomNode(query=self.unit.raw_query, field=self.field)
@@ -132,7 +122,7 @@ class GenericQueryParser(QueryParser):
             raise e
 
     def parse(self, raw_query: str) -> ParseNode:
-        raw_query = raw_query.translate(str.maketrans("", "", ".-/,()?*'"))
+        raw_query = raw_query.translate(str.maketrans("", "", ".-/,?*'"))
 
         expression = Forward()
 

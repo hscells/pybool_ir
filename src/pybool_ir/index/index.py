@@ -40,7 +40,7 @@ class Indexer(ABC):
         # See: https://lucene.apache.org/core/9_1_0/core/org/apache/lucene/search/similarities/package-summary.html
         self.similarity = BM25Similarity()
 
-        #: The underlying lucene index.
+        # The underlying lucene index.
         self.index: engine.Indexer
 
     def retrieve(self, query: str):
