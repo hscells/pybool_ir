@@ -27,13 +27,15 @@ class Indexer(ABC):
 
     """
 
-    def __init__(self, index_path: Union[Path, str], store_fields: bool = True, optional_fields: List[str] = None):
+    def __init__(self, index_path: Union[Path, str], store_fields: bool = True,
+                 store_termvectors: bool = False, optional_fields: List[str] = None):
         if not isinstance(index_path, Path):
             index_path = Path(index_path)
         assert isinstance(index_path, Path)
 
         self.index_path = index_path
         self.store_fields = store_fields
+        self.store_termvectors = store_termvectors
         self.optional_fields = optional_fields
 
         self._analyzer = analysis.standard.StandardAnalyzer()
@@ -109,9 +111,9 @@ class Indexer(ABC):
         if self.optional_fields is not None:
             for optional_field_name in self.optional_fields:
                 if optional_field_name.startswith("#"):
-                    self.index.set(optional_field_name[1:], engine.Field.String, stored=self.store_fields)
+                    self.index.set(optional_field_name[1:], engine.Field.String, stored=self.store_fields, storeTermVectors=self.store_termvectors)
                 else:
-                    self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields)
+                    self.index.set(optional_field_name, engine.Field.Text, stored=self.store_fields, storeTermVectors=self.store_termvectors)
 
     def set_similarity(self, sim_cls):
         self.similarity = sim_cls

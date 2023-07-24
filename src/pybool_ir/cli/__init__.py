@@ -147,15 +147,24 @@ def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
     "-s",
     "--store",
     "store_fields",
-    default=False,
+    default=True,
     type=click.BOOL,
     multiple=False,
     required=False,
     help="whether to store fields or not"
 )
-def ir_datasets_index(collection_name: str, index_path: Path, store_fields: bool):
+@click.option(
+    "--term-vectors",
+    "term_vectors",
+    default=False,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to store term vectors or not"
+)
+def ir_datasets_index(collection_name: str, index_path: Path, store_fields: bool, term_vectors: bool):
     from pybool_ir.index.ir_datasets import IRDatasetsIndexer
-    with IRDatasetsIndexer(index_path, collection_name, store_fields=store_fields) as ix:
+    with IRDatasetsIndexer(index_path, collection_name, store_fields=store_fields, store_termvectors=term_vectors) as ix:
         ix.bulk_index()
 
 

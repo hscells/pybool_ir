@@ -15,8 +15,8 @@ from org.apache.lucene.analysis.en import PorterStemFilter
 class IRDatasetsIndexer(Indexer):
 
     def __init__(self, index_path: Union[Path, str], dataset_name: str,
-                 store_fields: bool = True, optional_fields: List[str] = None):
-        super().__init__(index_path, store_fields, optional_fields)
+                 store_fields: bool = True, store_termvectors: bool = True, optional_fields: List[str] = None):
+        super().__init__(index_path, store_fields=store_fields, store_termvectors=store_termvectors, optional_fields=optional_fields)
         self.dataset_name = dataset_name
         self.dataset = ir_datasets.load(dataset_name)
 
@@ -50,10 +50,10 @@ class IRDatasetsIndexer(Indexer):
     def set_index_fields(self, store_fields: bool = False):
         self.index.set("id", engine.Field.String, stored=True, docValuesType="binary")
         self.index.set("date", engine.DateTimeField, stored=store_fields)
-        self.index.set("contents", engine.Field.Text, stored=store_fields)
+        self.index.set("contents", engine.Field.Text, stored=store_fields, storeTermVectors=self.store_termvectors)
         for field in self.dataset.docs_cls()._fields:
             if field not in ["id", "date", "contents"]:
-                self.index.set(field, engine.Field.Text, stored=store_fields)
+                self.index.set(field, engine.Field.Text, stored=store_fields, storeTermVectors=self.store_termvectors)
 
     # noinspection PyMethodOverriding
     def bulk_index(self):

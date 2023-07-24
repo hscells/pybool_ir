@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 import pybool_ir
 from pybool_ir.experiments.collections import Collection, Topic
+from pybool_ir.index.generic import GenericSearcher
 from pybool_ir.index.index import Indexer
 from pybool_ir.query.ast import AtomNode
 from pybool_ir.query.parser import QueryParser
@@ -45,6 +46,16 @@ class LuceneSearcher(ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.index = None
         self.indexer.__exit__(exc_type, exc_val, exc_tb)
+
+
+class GenericLuceneSearcher(LuceneSearcher):
+    """
+    Wrapper around a lucene index, where the type of the indexer is not known.
+    """
+
+    def __init__(self, index_path: Path | str):
+        indexer = GenericSearcher(index_path)
+        super().__init__(indexer)
 
 
 class RetrievalExperiment(LuceneSearcher):
