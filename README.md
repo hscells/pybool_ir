@@ -1,5 +1,7 @@
 # pybool_ir
 
+**UPDATE!** [pybool_ir-ui](https://github.com/hscells/pybool_ir-ui) is a new tool for creating IR demos with indexes and query languages created in pybool_ir. You can see a live demo of a PubMed index created in pybool_ir which uses the PubMed query syntax at [pubmed.chatnoir.eu](https://pubmed.chatnoir.eu).
+
 This repository contains many related tools and libraries for the development of domain-specific  [information retrieval](https://en.wikipedia.org/wiki/Information_retrieval) research, with a focus on accurate indexing of complex collections and experimenting with query languages (namely variations on Boolean query syntax). This library is broken into various packages to meet the needs of different research goals. Some notable modules include:
 
  - `query`: Used for parsing and performing operations on queries. Included in this package is a query parser that translates queries for search engines like PubMed into equivalent Lucene queries. One can also use this package to perform various operations on queries using the parsed [AST](https://en.wikipedia.org/wiki/Abstract_syntax_tree).
