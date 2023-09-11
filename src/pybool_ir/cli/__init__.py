@@ -344,3 +344,56 @@ def generic_search(index_path: Path, store_fields: bool):
             raw_query = session.prompt("?>", validator=QueryValidator())
             lucene_query = parser.parse_lucene(raw_query)
             ix.search_fmt(lucene_query)
+
+@generic.command("jsonl_index")
+@click.option(
+    "-p",
+    "--path",
+    "raw_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location of raw data"
+)
+@click.option(
+    "-i",
+    "--index",
+    "index_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to write the lucene index"
+)
+@click.option(
+    "-f",
+    "--field",
+    "fields",
+    default=None,
+    type=click.STRING,
+    multiple=True,
+    required=True,
+    help="fields to store"
+)
+@click.option(
+    "-s",
+    "--store",
+    "store_fields",
+    default=True,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to store fields or not"
+)
+@click.option(
+    "--term-vectors",
+    "term_vectors",
+    default=False,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to store term vectors or not"
+)
+def generic_index_jsonl(raw_path: Path, index_path: Path, store_fields: bool, term_vectors: bool, fields: List[str]):
+    from pybool_ir.index.generic import JsonlIndexer
+    with JsonlIndexer(index_path, store_termvectors=term_vectors, store_fields=store_fields, optional_fields=fields) as ix:
+        ix.bulk_index(raw_path)

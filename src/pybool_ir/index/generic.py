@@ -29,8 +29,8 @@ class JsonlIndexer(Indexer):
     """
 
     def __init__(self, index_path: Union[Path, str],
-                 store_fields: bool = True, optional_fields: List[str] = None):
-        super().__init__(index_path, store_fields, optional_fields)
+                 store_fields: bool = True, store_termvectors: bool = False, optional_fields: List[str] = None):
+        super().__init__(index_path, store_fields, store_termvectors, optional_fields)
         # Do some more general purpose analysis.
         self._analyzer = engine.Analyzer.standard(StopFilter, PorterStemFilter, TypeAsPayloadTokenFilter)
 
