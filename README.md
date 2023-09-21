@@ -76,3 +76,17 @@ from pybool_ir.pubmed.index import PubmedIndexer
 with AdHocExperiment(PubmedIndexer(index_path="pubmed"), raw_query="headache[tiab]") as experiment:
     print(experiment.count())
 ```
+
+## Citing
+
+If you use this library in your research, please cite [the following paper](https://dl.acm.org/doi/10.1145/3539618.3591819):
+
+```
+@inproceedings{scells2023pyboolir,
+    author = {Scells, Harrisen and Potthast, Martin},
+    title = {Pybool_ir: A Toolkit for Domain-Specific Search Experiments},
+    year = {2023},
+    booktitle = {Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+    pages = {3190–3194},
+}
+```
