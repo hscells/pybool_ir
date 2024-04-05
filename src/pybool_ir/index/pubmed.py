@@ -35,7 +35,7 @@ class PubmedArticle(Document):
                  publication_type: List[str], mesh_heading_list: List[str],
                  mesh_qualifier_list: List[str], mesh_major_heading_list: List[str],
                  supplementary_concept_list: List[str], keyword_list: List[str], **optional_fields):
-        super(PubmedArticle, self).__setattr__("fields", {
+        super().__init__(**{**{
             "id": id,
             "date": date,
             "title": title,
@@ -46,8 +46,7 @@ class PubmedArticle(Document):
             "mesh_major_heading_list": mesh_major_heading_list,
             "supplementary_concept_list": supplementary_concept_list,
             "keyword_list": keyword_list
-        })
-        super().__init__(**optional_fields)
+        }, **optional_fields})
 
     @staticmethod
     def from_hit(hit: Hit):

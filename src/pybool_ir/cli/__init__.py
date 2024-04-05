@@ -270,7 +270,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
         while True:
             raw_query = session.prompt("?>", validator=QueryValidator())
             lucene_query = parser.parse_lucene(raw_query)
-            ix.search(lucene_query)
+            ix.search_fmt(lucene_query)
 
 
 @csur.command("process")
