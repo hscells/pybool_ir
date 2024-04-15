@@ -52,7 +52,7 @@ Typical retrieval experiment. Note that there are many more arguments that one c
 ```python
 from pybool_ir.experiments.collections import load_collection
 from pybool_ir.experiments.retrieval import RetrievalExperiment
-from pybool_ir.pubmed.index import PubmedIndexer
+from pybool_ir.index.pubmed import PubmedIndexer
 from ir_measures import *
 import ir_measures
 
