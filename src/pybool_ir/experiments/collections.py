@@ -138,6 +138,32 @@ def load_collection_ir_datasets(name: str) -> Collection:
     return Collection.from_dir(download_dir)
 
 
+def load_searchrecorder(name: str) -> Collection:
+    """
+    Load a collection from the JSONL file used by the searcherecorder tool (https://estech.shinyapps.io/searchrecorder/)
+    This format is proposed by Haddaway et al. in their work named
+    "A suggested data structure for transparent and repeatable reporting of bibliographic searching."
+    """
+    topics = []
+    with open(name, "r") as f:
+        for i in f:
+            record = json.loads(i)
+            if record['search_time_span'] is None:
+                topics.append(Topic(identifier=record['study_id'],
+                              description=record['review_question'],
+                              raw_query=record['search_string'].replace("\n", ""),
+                              date_from="",
+                              date_to=""))
+            else:
+                topics.append(Topic(identifier=record['study_id'],
+                              description=record['review_question'],
+                              raw_query=record['search_string'].replace("\n", ""),
+                              date_from=record['search_time_span'].split("-")[0].strip(),
+                              date_to=record['search_time_span'].split("-")[-1].strip()))
+
+    return Collection(name, topics, [])
+
+
 def parse_clef_tar_topic(topic_str: str, date_from: str = "1940", date_to: str = "2017", parse_query: bool = False) -> Topic:
     """
     Helper function that parses a topic from the CLEF TAR collection.
