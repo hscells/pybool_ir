@@ -71,7 +71,7 @@ It's also possible to do more ad hoc retrieval experiments.
 
 ```python
 from pybool_ir.experiments.retrieval import AdHocExperiment
-from pybool_ir.pubmed.index import PubmedIndexer
+from pybool_ir.index.pubmed import PubmedIndexer
 
 with AdHocExperiment(PubmedIndexer(index_path="pubmed"), raw_query="headache[tiab]") as experiment:
     print(experiment.count())

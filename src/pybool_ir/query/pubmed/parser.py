@@ -322,7 +322,10 @@ class _FieldUnit:
         return f"{self.field}"
 
     def lucene_fields(self):
-        return fields.mapping[self.field]
+        try:
+            return fields.mapping[self.field]
+        except KeyError:
+            raise ValueError(f"Field {self.field} is not a valid field.")
 
 
 # --------------------------------------
