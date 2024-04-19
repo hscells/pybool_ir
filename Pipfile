@@ -9,7 +9,6 @@ jcc = { path = "./pylucene/jcc", editable = false }
 pyparsing = "*"
 pytest = "*"
 dataclasses-json = "*"
-cpython = "*"
 jupyter = "*"
 jupyterlab = "*"
 progressbar2 = "*"
