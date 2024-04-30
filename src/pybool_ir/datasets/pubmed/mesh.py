@@ -23,7 +23,7 @@ def analyze_mesh(heading: str) -> str:
 
 
 class MeSHTree:
-    def __init__(self, mtrees_file: Path = DEFAULT_PATH, year: str = MESH_YEAR):
+    def __init__(self, mtrees_file: Path = DEFAULT_PATH, year: str = MESH_YEAR, minimum_short_mesh_length: int = 5):
         self.locations = {}
         self.headings = []
         if not Path(mtrees_file / f"mtrees{year}.bin").exists():
@@ -36,6 +36,16 @@ class MeSHTree:
                 # analyzed_heading = heading
                 self.locations[analyzed_heading] = i
                 self.headings.append((location.strip(), heading))
+        self._minimum_short_mesh_length = minimum_short_mesh_length
+        self._short_mesh_headings = set([k for k in self.locations.keys() if len(k) <= minimum_short_mesh_length])
+
+    @property
+    def short_mesh_headings(self) -> set:
+        return self._short_mesh_headings
+
+    @property
+    def minimum_short_mesh_length(self) -> int:
+        return self._minimum_short_mesh_length
 
     def explode(self, heading: str) -> List[str]:
         analyzed_heading = analyze_mesh(heading)
