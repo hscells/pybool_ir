@@ -111,11 +111,12 @@ class _Atom(_ParseNode):
 
         # Special field that is not actually indexed.
         if mapped_fields[0] == "all_fields":
-            headings = [x for x in list(tree.locations.keys()) if self.unit.query.lower() in x]
-            for heading in headings:
-                for exploded_heading in tree.explode(heading):
-                    expansion_atoms.append(Q.regexp("mesh_heading_list", exploded_heading))
-                    expansion_atoms.append(Q.regexp("publication_type", exploded_heading))
+            if (len(self.unit.query) <= tree.minimum_short_mesh_length and self.unit.query in tree.short_mesh_headings) or len(self.unit.query) > tree.minimum_short_mesh_length:
+                headings = [x for x in list(tree.locations.keys()) if self.unit.query.lower() in x]
+                for heading in headings:
+                    for exploded_heading in tree.explode(heading):
+                        expansion_atoms.append(Q.regexp("mesh_heading_list", exploded_heading))
+                        expansion_atoms.append(Q.regexp("publication_type", exploded_heading))
             if " " in self.unit.analyzed_query:
                 expansion_atoms += [Q.near("title", *self.unit.analyzed_query.split()),
                                     Q.near("abstract", *self.unit.analyzed_query.split())]
