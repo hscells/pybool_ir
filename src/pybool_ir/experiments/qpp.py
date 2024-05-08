@@ -8,7 +8,11 @@ from typing import override, Union, Dict, List
 from dataclasses_json import dataclass_json
 from lupyne import engine
 
+from pybool_ir.experiments.collections import Topic, Collection
 from pybool_ir.experiments.retrieval import RetrievalExperiment
+from pybool_ir.index import Indexer
+from pybool_ir.query import PubmedQueryParser
+from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.pubmed import fields
 from pybool_ir.query.ast import ASTNode, OperatorNode, AtomNode
 
@@ -227,3 +231,14 @@ class QPPExperiment(RetrievalExperiment):
                     case _:
                         raise ValueError("Should never arrive here")
                 yield qpp.measure(self.index, query, topic.identifier)
+
+
+def AdHocQPPExperiment(indexer: Indexer, raw_query: str, topic_id: str = "0",
+                       query_parser: QueryParser = PubmedQueryParser(),
+                       date_from="1900/01/01", date_to="3000/01/01", ignore_dates: bool = False, date_field: str = "dp") -> QPPExperiment:
+    collection = Collection("adhoc", [Topic(identifier=topic_id,
+                                            description="ad-hoc topic",
+                                            raw_query=raw_query,
+                                            date_from=date_from,
+                                            date_to=date_to)], [])
+    return QPPExperiment(indexer, collection, query_parser, ignore_dates=ignore_dates, date_field=date_field)
