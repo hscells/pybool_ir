@@ -242,7 +242,7 @@ class RetrievalExperiment(LuceneSearcher):
         return json.dumps(d)
 
 
-def AdHocExperiment(indexer: Indexer, raw_query: str = None,
+def AdHocExperiment(indexer: Indexer, raw_query: str = None, topic_id: str = None,
                     query_parser: QueryParser = PubmedQueryParser(),
                     date_from="1900/01/01", date_to="3000/01/01", ignore_dates: bool = False, date_field: str = "dp") -> RetrievalExperiment:
     """
@@ -257,6 +257,12 @@ def AdHocExperiment(indexer: Indexer, raw_query: str = None,
     collection = Collection("adhoc", [], [])
     if raw_query is not None:
         collection = Collection("adhoc", [Topic(identifier="0",
+                                                description="ad-hoc topic",
+                                                raw_query=raw_query,
+                                                date_from=date_from,
+                                                date_to=date_to)], [])
+    if topic_id is not None:
+        collection = Collection("adhoc", [Topic(identifier=topic_id,
                                                 description="ad-hoc topic",
                                                 raw_query=raw_query,
                                                 date_from=date_from,
