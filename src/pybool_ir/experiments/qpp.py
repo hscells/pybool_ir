@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from inspect import signature
-from typing import override, Union, Dict, List
+from typing import Union, Dict, List
 
 from dataclasses_json import dataclass_json
 from lupyne import engine
@@ -31,6 +31,11 @@ class QPPResult:
     query: str
     result: float
 
+    def __init__(self, qpp: str, query: str, result: float):
+        self.qpp = qpp
+        self.query = query
+        self.result = result
+
 
 class QPP(ABC):
     def measure(self, index: engine.Indexer, query: Union[Q, ASTNode], identifier: str) -> QPPResult:
@@ -38,7 +43,7 @@ class QPP(ABC):
 
     @property
     def name(self) -> str:
-        return self.__class__.__name__
+        return self.__class__.__name__.replace("_", "")
 
     @abstractmethod
     def _measure(self, index: engine.Indexer, query: Union[Q, ASTNode]) -> float:
@@ -58,7 +63,6 @@ class _NumRetrieved(QPP):
     Measure the number of documents retrieved by a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: Q) -> float:
         return index.count(query)
 
@@ -68,7 +72,6 @@ class _NumBooleanClauses(QPP):
     Measure the number of boolean clauses in a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def count_boolean_clauses(node: ASTNode) -> int:
             if isinstance(node, OperatorNode):
@@ -84,7 +87,6 @@ class _NumKeywords(QPP):
     Measure the number of keywords in a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def count_keywords(node: ASTNode) -> int:
             if isinstance(node, OperatorNode):
@@ -100,15 +102,15 @@ class _NumMeSHKeywords(QPP):
     Measure the number of MeSH keywords in a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def count_mesh_keywords(node: ASTNode) -> int:
             if isinstance(node, OperatorNode):
                 return sum([count_mesh_keywords(c) for c in node.children])
             else:
                 if isinstance(node, AtomNode):
-                    if fields.mapping[node.field][0] in ["mesh_heading_list", "mesh_qualifier_list", "mesh_major_heading_list", "supplementary_concept_list"]:
+                    if fields.mapping[node.field.field][0] in ["mesh_heading_list", "mesh_qualifier_list", "mesh_major_heading_list", "supplementary_concept_list"]:
                         return 1
+                return 0
 
         return count_mesh_keywords(query)
 
@@ -118,7 +120,6 @@ class _MaximumDepth(QPP):
     Measure the maximum depth of a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def max_depth(node: ASTNode) -> int:
             if isinstance(node, OperatorNode):
@@ -134,15 +135,15 @@ class _MaximumMeSHDepth(QPP):
     Measure the maximum depth of a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def max_mesh_depth(node: ASTNode) -> int:
             if isinstance(node, OperatorNode):
                 return max([max_mesh_depth(c) for c in node.children])
             else:
                 if isinstance(node, AtomNode):
-                    if fields.mapping[node.field][0] in ["mesh_heading_list", "mesh_qualifier_list", "mesh_major_heading_list", "supplementary_concept_list"]:
+                    if fields.mapping[node.field.field][0] in ["mesh_heading_list", "mesh_qualifier_list", "mesh_major_heading_list", "supplementary_concept_list"]:
                         return 1
+                return 0
 
         return max_mesh_depth(query)
 
@@ -152,15 +153,15 @@ class _AverageMeSHDepth(QPP):
     Measure the maximum depth of a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def avg_mesh_depth(node: ASTNode) -> float:
             if isinstance(node, OperatorNode):
                 return sum([avg_mesh_depth(c) for c in node.children]) / len(node.children)
             else:
                 if isinstance(node, AtomNode):
-                    if fields.mapping[node.field][0] in ["mesh_heading_list", "mesh_qualifier_list", "mesh_major_heading_list", "supplementary_concept_list"]:
+                    if fields.mapping[node.field.field][0] in ["mesh_heading_list", "mesh_qualifier_list", "mesh_major_heading_list", "supplementary_concept_list"]:
                         return 1
+                return 0
 
         return avg_mesh_depth(query)
 
@@ -170,7 +171,6 @@ class _MaximumWidth(QPP):
     Measure the maximum width of a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def max_width(node: ASTNode) -> int:
             if isinstance(node, OperatorNode):
@@ -186,7 +186,6 @@ class _RootWidth(QPP):
     Measure the width of the root of a query.
     """
 
-    @override
     def _measure(self, index: engine.Indexer, query: ASTNode) -> float:
         def root_width(node: ASTNode) -> int:
             if isinstance(node, OperatorNode):
@@ -206,6 +205,15 @@ MaximumMeSHDepth = _MaximumMeSHDepth()
 AverageMeSHDepth = _AverageMeSHDepth()
 MaximumWidth = _MaximumWidth()
 RootWidth = _RootWidth()
+AllQPPs = [NumRetrieved,
+           NumBooleanClauses,
+           NumKeywords,
+           NumMeSHKeywords,
+           MaximumDepth,
+           MaximumMeSHDepth,
+           AverageMeSHDepth,
+           MaximumWidth,
+           RootWidth]
 
 
 class QPPExperiment(RetrievalExperiment):
@@ -215,11 +223,11 @@ class QPPExperiment(RetrievalExperiment):
     def ast_queries(self) -> Dict[str, ASTNode]:
         d = {}
         for topic in self.collection.topics:
+            print(topic.raw_query)
             ast_query = self.query_parser.parse_ast(topic.raw_query)
             d[topic.identifier] = ast_query
         return d
 
-    @override
     def results(self, *qpps: QPP) -> List[QPPResult]:
         for qpp in qpps:
             for topic in self.collection.topics:
