@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from inspect import signature
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Callable, Optional
 
 from dataclasses_json import dataclass_json
 from lupyne import engine
@@ -194,6 +194,38 @@ class _RootWidth(QPP):
                 return 1
 
         return root_width(query)
+
+
+def FuncQPP(name: str, func: Callable[[Union[Q, ASTNode], Optional[engine.Indexer]], float]) -> QPP:
+    class _QPP(QPP):
+        def __init__(self, name, f):
+            super().__init__()
+            sig = signature(f)
+            self._f1 = None
+            self._f2 = None
+            if sig.parameters['query'].annotation not in [Q, ASTNode]:
+                raise ValueError("Function must have a query parameter with engine.Query or ASTNode type hint")
+            if sig.parameters["query"].annotation is Q and "index" not in sig.parameters and sig.parameters["index"].annotation is not engine.Indexer:
+                raise ValueError("Function must have an index parameter with engine.Indexer type hint")
+
+            if sig.parameters["query"].annotation is Q:
+                self._f1 = f
+            else:
+                self._f2 = f
+
+            self._name = name
+
+        @property
+        def name(self) -> str:
+            return self._name
+
+        def _measure(self, index: engine.Indexer, query: Q) -> float:
+            if self._f1 is not None:
+                return self._f1(query, index)
+            else:
+                return self._f2(query)
+
+    return _QPP(name, func)
 
 
 NumRetrieved = _NumRetrieved()
