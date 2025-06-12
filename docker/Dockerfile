@@ -5,7 +5,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV LUCENE_VERSION=9.4.1
-ENV ANT_VERSION=1.10.12
+ENV ANT_VERSION=1.10.14
 ENV PATH=$PATH:/pybool_ir/ant/bin:/opt/conda/bin
 ARG MIRROR=downloads
 ARG JCC_JDK=${JAVA_HOME}
