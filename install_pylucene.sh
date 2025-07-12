@@ -12,8 +12,8 @@ trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
 
 # Change these variables as needed.
 mirror=downloads
-lucene_version=9.4.1
-ant_version=1.10.12
+lucene_version=9.12.0
+ant_version=1.10.14
 
 # Download pylucene and ant.
 curl -O https://${mirror}.apache.org/lucene/pylucene/pylucene-${lucene_version}-src.tar.gz
@@ -33,21 +33,17 @@ export PATH="$PATH:$(pwd)/ant/bin"
 # https://lucene.apache.org/pylucene/jcc/install.html
 cd pylucene
 pushd jcc
-# Use the following line for M1/M2 Macs:
-# export JCC_INCLUDES=/opt/homebrew/Cellar/openjdk/19.0.1/libexec/openjdk.jdk/Contents/Home/include:/opt/homebrew/Cellar/openjdk/19.0.1/libexec/openjdk.jdk/Contents/Home/include/darwin:/opt/homebrew/opt/python@3.10/Frameworks/Python.framework/Versions/3.10/include/python3.10
-# Also for M1/M2 Macs:
-# in setup.py, change: enable_shared = True
-python setup.py build
-python setup.py install
+# IMPORTANT: Need java 17
+export JCC_INCLUDES=/opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/include:/opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/include/darwin
+uv run setup.py build
+uv run setup.py install
 popd
 
 # Install pylucene.
 # https://lucene.apache.org/pylucene/install.html
-# Might need `--arch x86_64`.
-ANT=$(which ant) PYTHON=$(which python) JCC="python -m jcc --shared --wheel" NUM_FILES=10 make
+ANT=$(which ant) PYTHON="uv run python" JCC="uv run python -m jcc --wheel" NUM_FILES=10 make
 
 # Clean up the files.
 cd ../
-pipenv install pylucene/dist/*.whl
-pipenv update
+uv add pylucene/dist/*.whl
 true

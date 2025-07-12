@@ -22,7 +22,6 @@ def cli():
     pybool_ir utilities.
     """
 
-
 @cli.group()
 def pubmed():
     """Pubmed related commands."""
@@ -397,3 +396,7 @@ def generic_index_jsonl(raw_path: Path, index_path: Path, store_fields: bool, te
     from pybool_ir.index.generic import JsonlIndexer
     with JsonlIndexer(index_path, store_termvectors=term_vectors, store_fields=store_fields, optional_fields=fields) as ix:
         ix.bulk_index(raw_path)
+
+
+if __name__ == '__main__':
+    cli()
