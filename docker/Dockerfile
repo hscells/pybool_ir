@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:23.5.2-0@sha256:77f9119def83d94b7afb654b39a1c21aaa7f255518aba57de08321760c27c86a
+FROM continuumio/miniconda3:25.1.1-2@sha256:89e5406f2322af808b23f5461121862fd1e098b360e65be0c3e9d2d79b94c6a4
 RUN apt-get update \ 
     && apt-get install -y --no-install-recommends \
     curl wget build-essential openjdk-17-jdk git \
