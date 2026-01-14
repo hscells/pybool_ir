@@ -57,9 +57,31 @@ def experiment():
     required=True,
     help="location to download Pubmed baseline"
 )
-def pubmed_download(baseline_path: Path):
+
+@click.option(
+    "-l",
+    "--limit",
+    "limit",
+    type=int,
+    default=0,
+    help="number of documents, that should be downloaded"
+)
+
+# TODO check for deletion
+# def pubmed_download(baseline_path: Path):
+#     from pybool_ir.datasets.pubmed.baseline import download_baseline
+#     download_baseline(Path(baseline_path))
+
+# TODO check for correct function
+def pubmed_download(baseline_path: Path, limit: int):
     from pybool_ir.datasets.pubmed.baseline import download_baseline
-    download_baseline(Path(baseline_path))
+
+    if limit > 0: 
+        print(f"Start download of {limit} documents to {baseline_path}...")
+        download_baseline(Path(baseline_path), limit)
+    else: 
+        print(f"Download full baseline to {baseline_path}...")
+        download_baseline(Path(baseline_path))
 
 
 @pubmed.command("process")
