@@ -12,7 +12,7 @@ trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
 
 # Change these variables as needed.
 mirror=downloads
-lucene_version=9.12.0
+lucene_version=10.0.0
 ant_version=1.10.14
 
 # Download pylucene and ant.
@@ -33,8 +33,10 @@ export PATH="$PATH:$(pwd)/ant/bin"
 # https://lucene.apache.org/pylucene/jcc/install.html
 cd pylucene
 pushd jcc
-# IMPORTANT: Need java 17
-export JCC_INCLUDES=/opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/include:/opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/include/darwin
+# IMPORTANT: Need java 17 (21 for pylucene v10.0.0)
+#export JCC_INCLUDES=/opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/include:/opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/include/darwin
+export JCC_INCLUDES=/opt/homebrew/Cellar/openjdk@21/21.0.9/libexec/openjdk.jdk/Contents/Home/include:/opt/homebrew/Cellar/openjdk@21/21.0.9/libexec/openjdk.jdk/Contents/Home/include/darwin
+
 uv run setup.py build
 uv run setup.py install
 popd
