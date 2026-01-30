@@ -4,7 +4,7 @@ RUN apt-get update \
     curl wget build-essential openjdk-17-jdk git \
     && rm -rf /var/lib/apt/lists/*
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV LUCENE_VERSION=9.12.0
+ENV LUCENE_VERSION=10.0.0
 ENV ANT_VERSION=1.10.14
 ENV PATH=$PATH:/pybool_ir/ant/bin:/opt/conda/bin
 ARG MIRROR=downloads
