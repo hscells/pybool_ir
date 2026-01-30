@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3:25.1.1-2@sha256:89e5406f2322af808b23f5461121862fd1e098b360e65be0c3e9d2d79b94c6a4
+FROM continuumio/miniconda3:25.11.1@sha256:5df7c31c16e90e4ea370836770feed507a1cf51c6e8aad835c65fb26b9eca941
 RUN apt-get update \ 
     && apt-get install -y --no-install-recommends \
     curl wget build-essential openjdk-21-jdk git \
