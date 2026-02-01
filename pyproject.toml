@@ -13,6 +13,7 @@ dependencies = [
     "furo>=2024.8.6",
     "ir-datasets>=0.5.11",
     "ir-measures>=0.3.7",
+    "jcc>=3.15",
     "jupyter>=1.1.1",
     "jupyterlab>=4.4.4",
     "lucene",
@@ -41,3 +42,4 @@ dev = [
 
 [tool.uv.sources]
 pybool-ir = { workspace = true }
+lucene = { path = "pylucene/dist/lucene-10.0.0-cp313-cp313-macosx_11_0_arm64.whl" }
