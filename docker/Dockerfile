@@ -1,10 +1,10 @@
-FROM continuumio/miniconda3:25.1.1-2@sha256:89e5406f2322af808b23f5461121862fd1e098b360e65be0c3e9d2d79b94c6a4
+FROM continuumio/miniconda3:25.11.1@sha256:5df7c31c16e90e4ea370836770feed507a1cf51c6e8aad835c65fb26b9eca941
 RUN apt-get update \ 
     && apt-get install -y --no-install-recommends \
-    curl wget build-essential openjdk-17-jdk git \
+    curl wget build-essential openjdk-21-jdk git \
     && rm -rf /var/lib/apt/lists/*
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV LUCENE_VERSION=9.12.0
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+ENV LUCENE_VERSION=10.0.0
 ENV ANT_VERSION=1.10.14
 ENV PATH=$PATH:/pybool_ir/ant/bin:/opt/conda/bin
 ARG MIRROR=downloads
