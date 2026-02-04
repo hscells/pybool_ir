@@ -1,0 +1,31 @@
+FROM continuumio/miniconda3:25.11.1@sha256:5df7c31c16e90e4ea370836770feed507a1cf51c6e8aad835c65fb26b9eca941
+RUN apt-get update \ 
+    && apt-get install -y --no-install-recommends \
+    curl wget build-essential openjdk-21-jdk \
+    && rm -rf /var/lib/apt/lists/*
+ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+ENV LUCENE_VERSION=10.0.0
+ENV ANT_VERSION=1.10.14
+ENV PATH=$PATH:/pybool_ir/ant/bin:/opt/conda/bin
+ENV MIRROR=downloads
+ENV JCC_JDK=${JAVA_HOME}
+ENV JCC_ARGSEP=";"
+ENV JCC_LFLAGS="-L$JAVA_HOME/lib;-ljava;-L$JAVA_HOME/lib/server;-ljvm;-Wl,-rpath=$JAVA_HOME/lib:$JAVA_HOME/lib/server"
+ENV JCC="python -m jcc --wheel"
+WORKDIR /pybool_ir
+RUN curl -O https://${MIRROR}.apache.org/lucene/pylucene/pylucene-${LUCENE_VERSION}-src.tar.gz \
+    && gunzip pylucene-${LUCENE_VERSION}-src.tar.gz \
+    && tar -xvf pylucene-${LUCENE_VERSION}-src.tar \
+    && rm pylucene-${LUCENE_VERSION}-src.tar \
+    && ln -s pylucene-${LUCENE_VERSION} pylucene \
+    && curl -O https://${MIRROR}.apache.org/ant/binaries/apache-ant-${ANT_VERSION}-bin.tar.gz \
+    && gunzip apache-ant-${ANT_VERSION}-bin.tar.gz \
+    && tar -xvf apache-ant-${ANT_VERSION}-bin.tar \
+    && rm apache-ant-${ANT_VERSION}-bin.tar \
+    && ln -s apache-ant-${ANT_VERSION} ant
+RUN cd pylucene/jcc \
+    && python setup.py build \
+    && python setup.py install
+RUN cd pylucene \
+    && NUM_FILES=10 make
+RUN pip install pylucene/dist/*.whl

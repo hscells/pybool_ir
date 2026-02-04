@@ -20,3 +20,5 @@ __pycache__
 
 *.jsonl
 hs_err_pid*
+uv.lock
+pyproject.toml
