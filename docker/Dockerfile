@@ -30,4 +30,5 @@ RUN cd pylucene/jcc \
 RUN cd pylucene \
     && NUM_FILES=10 make
 RUN pip install pylucene/dist/*.whl
+RUN cp pyproject.toml.copy pyproject.toml
 RUN pip install -e .
