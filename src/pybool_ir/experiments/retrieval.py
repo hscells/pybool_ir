@@ -166,19 +166,19 @@ class RetrievalExperiment(LuceneSearcher):
         for query_id, lucene_query in tqdm(self.queries.items(), desc="retrieval"):
             # Documents can remain un-scored for efficiency (?).
             hits = self.index.search(lucene_query, scored=False)
+
             page_size = self.page_size
-            if page_size > len(hits):
-                page_size = hits
+            hitsize = len(hits)
+            if page_size > hitsize:
+                page_size = hitsize
             
             page_start = self.page_start
-            if page_start > len(hits):
+            if page_start > hitsize:
                 page_start = -1
             
             page_end = -1
-            if self.page_start+page_size < len(hits):
-                page_end = page_start+page_size
-
-            print(len(hits), page_start, page_end)
+            if (page_start+page_size) < hitsize:
+                page_end = page_start+page_size     
 
             for hit in hits[page_start:page_end]:
                 yield ScoredDoc(query_id, hit["id"], 0)
