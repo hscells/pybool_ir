@@ -86,7 +86,8 @@ class RetrievalExperiment(LuceneSearcher):
                  query_parser: QueryParser = PubmedQueryParser(),
                  eval_measures: List[Measure] = None,
                  run_path: Path = None, filter_topics: List[str] = None,
-                 ignore_dates: bool = False, date_field: str = "dp"):
+                 ignore_dates: bool = False, date_field: str = "dp",
+                 page_start=0, page_size=-1):
         super().__init__(indexer)
         self.ignore_dates = ignore_dates
         self.date_field = date_field
@@ -97,6 +98,9 @@ class RetrievalExperiment(LuceneSearcher):
             filtered_topics = list(filter(lambda x: x.identifier in filter_topics, collection.topics))
             filtered_qrels = list(filter(lambda x: x.query_id in filter_topics, collection.qrels))
             collection = Collection(collection.identifier, filtered_topics, filtered_qrels)
+
+        self.page_start = page_start
+        self.page_size = page_size
 
         # Timings for reproducibility and sanity checks.
         self.date_created = datetime.now()
@@ -162,19 +166,27 @@ class RetrievalExperiment(LuceneSearcher):
         for query_id, lucene_query in tqdm(self.queries.items(), desc="retrieval"):
             # Documents can remain un-scored for efficiency (?).
             hits = self.index.search(lucene_query, scored=False)
-            for hit in hits:
+            page_size = self.page_size
+            if page_size > len(hits):
+                page_size = hits
+            
+            page_start = self.page_start
+            if page_start > len(hits):
+                page_start = -1
+            
+            page_end = -1
+            if self.page_start+page_size < len(hits):
+                page_end = page_start+page_size
+
+            print(len(hits), page_start, page_end)
+
+            for hit in hits[page_start:page_end]:
                 yield ScoredDoc(query_id, hit["id"], 0)
         self.date_completed = datetime.now()
 
     def doc(self, pmid: str):
         hits = self.index.search(f"id:{pmid}")
         for hit in hits:
-            # article: ix.PubmedArticle = ix.PubmedArticle.from_dict(hit.dict("mesh_heading_list",
-            #                                                                 "mesh_qualifier_list",
-            #                                                                 "mesh_major_heading_list",
-            #                                                                 "keyword_list",
-            #                                                                 "publication_type",
-            #                                                                 "supplementary_concept_list"))
             return hit
         return None
 
@@ -244,7 +256,9 @@ class RetrievalExperiment(LuceneSearcher):
 
 def AdHocExperiment(indexer: Indexer, raw_query: str = None, topic_id: str = "0",
                     query_parser: QueryParser = PubmedQueryParser(),
-                    date_from="1900/01/01", date_to="3000/01/01", ignore_dates: bool = False, date_field: str = "dp") -> RetrievalExperiment:
+                    date_from="1900/01/01", date_to="3000/01/01", 
+                    ignore_dates: bool = False, date_field: str = "dp",
+                    page_start=0, page_size=-1) -> RetrievalExperiment:
     """
     Unlike the `RetrievalExperiment` class, which expects a `Collection` object, this class allows for ad-hoc queries to be run, for example:
 
@@ -261,4 +275,6 @@ def AdHocExperiment(indexer: Indexer, raw_query: str = None, topic_id: str = "0"
                                                 raw_query=raw_query,
                                                 date_from=date_from,
                                                 date_to=date_to)], [])
-    return RetrievalExperiment(indexer, collection, query_parser, ignore_dates=ignore_dates, date_field=date_field)
+    return RetrievalExperiment(indexer, collection, query_parser, 
+                               ignore_dates=ignore_dates, date_field=date_field, 
+                               page_start=page_start, page_size=page_size)
