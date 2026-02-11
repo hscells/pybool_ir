@@ -9,7 +9,6 @@ import click
 from tqdm.auto import tqdm
 
 import pybool_ir
-from pybool_ir.experiments.retrieval import AdHocExperiment
 from pybool_ir.index.generic import GenericSearcher
 from pybool_ir.query import GenericQueryParser
 
@@ -190,6 +189,41 @@ def pubmed_index(baseline_path: Path, index_path: Path, store_fields: bool):
         ix.bulk_index(Path(baseline_path))
 
 
+
+@ctgov.command("index")
+@click.option(
+    "-b",
+    "--baseline",
+    "baseline_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location of baseline download"
+)
+@click.option(
+    "-i",
+    "--index",
+    "index_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to write the lucene index"
+)
+@click.option(
+    "-s",
+    "--store",
+    "store_fields",
+    default=False,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to store fields or not"
+)
+def ctgov_index(baseline_path: Path, index_path: Path, store_fields: bool):
+    from pybool_ir.index.ctgov import ClinicalTrialsGovIndexer
+    with ClinicalTrialsGovIndexer(Path(index_path), store_fields=store_fields) as ix:
+        ix.bulk_index(Path(baseline_path))
+
 @ir_datasets.command("index")
 @click.option(
     "-c",
@@ -329,12 +363,55 @@ def pubmed_search(index_path: Path, store_fields: bool):
             except Exception as e:
                 raise ValidationError(message=str(e), cursor_position=-1)
 
-    with AdHocExperiment(PubmedIndexer(Path(index_path), store_fields=store_fields), raw_query="test",page_start=0,page_size=10) as ex:
-        results = ex.run
-        total_count = len(results)
-        print(results)
-
     with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
+        print(f"pybool_ir {pybool_ir.__version__}")
+        print(f"loaded: {ix.index_path}")
+        session = PromptSession()
+        while True:
+            raw_query = session.prompt("?>", validator=QueryValidator())
+            lucene_query = parser.parse_lucene(raw_query)
+            ix.search_fmt(lucene_query)
+
+@ctgov.command("search")
+@click.option(
+    "-i",
+    "--index",
+    "index_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to the lucene index"
+)
+@click.option(
+    "-s",
+    "--store",
+    "store_fields",
+    default=False,
+    type=click.BOOL,
+    multiple=False,
+    required=False,
+    help="whether to display stored fields or not"
+)
+def pubmed_search(index_path: Path, store_fields: bool):
+    from pybool_ir.index.ctgov import ClinicalTrialsGovIndexer
+    from pybool_ir.query.essie.parser import EssieQueryParser
+    from prompt_toolkit import PromptSession
+    from prompt_toolkit.validation import Validator
+    from prompt_toolkit.validation import ValidationError
+
+    parser = EssieQueryParser()
+
+    print(parser.parse_ast("test"))
+
+    class QueryValidator(Validator):
+        def validate(self, query):
+            text = query.text
+            try:
+                parser._parse(text)
+            except Exception as e:
+                raise ValidationError(message=str(e), cursor_position=-1)
+
+    with ClinicalTrialsGovIndexer(Path(index_path), store_fields=store_fields) as ix:
         print(f"pybool_ir {pybool_ir.__version__}")
         print(f"loaded: {ix.index_path}")
         session = PromptSession()

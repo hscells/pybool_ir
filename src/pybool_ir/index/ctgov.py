@@ -5,6 +5,7 @@ Off-the-shelf indexer for PubMed articles.
 import calendar
 import gzip
 import os
+import glob
 import xml.etree.ElementTree as et
 from datetime import datetime
 from pathlib import Path
@@ -18,6 +19,8 @@ from tqdm.auto import tqdm
 
 from pybool_ir.index.document import Document
 from pybool_ir.index.index import Indexer, SearcherMixin
+
+from org.apache.lucene import document
 
 assert lucene.getVMEnv() or lucene.initVM()
 
@@ -35,16 +38,23 @@ class ClinicalTrialsGovArticle(Document):
                     secondary_id: str,
                     nct_id: str,
                     brief_title: str,
+                    official_title: str,
+                    sponsors: List[str],
                     source: str,
                     brief_summary: str,
+                    detailed_description: str,
                     overall_status: str,
+                    phase: str,
                     study_type: str,
                     has_expanded_access: str,
+                    primary_outcome: str,
+                    secondary_outcomes: str,
                     condition: str,
+                    intervention: str,
                     criteria: str,
                     gender: str,
-                    minimum_age: str,
-                    maximum_age: str,
+                    minimum_age: int,
+                    maximum_age: int,
                     healthy_volunteers: str,
                     location: str,
                     location_countries: List[str],
@@ -56,19 +66,28 @@ class ClinicalTrialsGovArticle(Document):
                     last_update_submitted_qc: datetime,
                     last_update_posted: datetime,
                     keyword: str,
+                    intervention_browse: List[str],
                     condition_browse: List[str],
+                    **optional_fields):
         super().__init__(**{**{
             "id": nct_id,
             "org_study_id": org_study_id,
             "secondary_id": secondary_id,
             "nct_id": nct_id,
             "brief_title": brief_title,
+            "official_title": official_title,
+            "sponsors": sponsors,
             "source": source,
             "brief_summary": brief_summary,
+            "detailed_description": detailed_description,
             "overall_status": overall_status,
+            "phase": phase,
             "study_type": study_type,
             "has_expanded_access": has_expanded_access,
+            "primary_outcome": primary_outcome,
+            "secondary_outcomes": secondary_outcomes,
             "condition": condition,
+            "intervention": intervention,
             "criteria": criteria,
             "gender": gender,
             "minimum_age": minimum_age,
@@ -84,6 +103,7 @@ class ClinicalTrialsGovArticle(Document):
             "last_update_submitted_qc": last_update_submitted_qc,
             "last_update_posted": last_update_posted,
             "keyword": keyword,
+            "intervention_browse": intervention_browse,
             "condition_browse": condition_browse,
         }, **optional_fields})
 
@@ -97,12 +117,19 @@ class ClinicalTrialsGovArticle(Document):
                      "secondary_id",
                      "nct_id",
                      "brief_title",
+                     "official_title",
+                     "sponsors",
                      "source",
                      "brief_summary",
+                     "detailed_description",
                      "overall_status",
+                     "phase",
                      "study_type",
                      "has_expanded_access",
+                     "primary_outcome",
+                     "secondary_outcomes",
                      "condition",
+                     "intervention",
                      "criteria",
                      "gender",
                      "minimum_age",
@@ -118,116 +145,140 @@ class ClinicalTrialsGovArticle(Document):
                      "late_update_submitted_qc",
                      "last_update_posted",
                      "keyword",
+                     "intervention_browse"
                      "condition_browse")
         del d["__id__"]
         del d["__score__"]
         return ClinicalTrialsGovArticle.from_dict(d)
 
-def parse_ctgov_date(date_str: str) -> Tuple[int, int, int]:
+def parse_ctgov_date(date_str: str) -> datetime:
     """
     Parse a date string from a CTGOV record. The returned value is a tuple of (year, month, day).
     """
-    day = str(DEFAULT_DAY)
-    month = str(DEFAULT_MONTH)
-    year = str(DEFAULT_YEAR)
-    date_str = date_str.lower(). \
-        replace(".", ""). \
-        replace(",", ""). \
-        replace(" to ", "-"). \
-        replace(" & ", "-")
+    day = DEFAULT_DAY
+    month = DEFAULT_MONTH
+    year = DEFAULT_YEAR
 
-    return year, month, day
+    date_str = date_str.split(" ")
+
+    month_mapping = {
+        "January": 1,
+        "February": 2,
+        "March": 3,
+        "April": 4,
+        "May": 5,
+        "June": 6,
+        "July": 7,
+        "August": 8,
+        "September": 9,
+        "October": 10,
+        "November": 11,
+        "December": 12,
+    }
+
+    month = month_mapping[date_str[0]]
+
+    if len(date_str) == 2:
+        year = int(date_str[1])
+    else:
+        day = int(date_str[1].replace(",",""))
+        year = int(date_str[2])
+    return datetime(year=year, month=month, day=day)
 
 
-def parse_pubmed_article_node(element: Element) -> PubmedArticle:
+def parse_ctgov_duration(age: str) -> int:
+    age = age.split(" ")
+
+    dur_mapping = {
+        "Days": 1,
+        "Months": 30,
+        "Years": 365,
+    }
+
+    age_t = int(age[0])
+    age_d = int(dur_mapping[age[1]])
+    return age_t * age_d
+
+def parse_ctgov_article(element: Element) -> ClinicalTrialsGovArticle:
     """
     Parse a PubmedArticle node from a Pubmed XML element.
     """
-    pmid = element.find("MedlineCitation/PMID").text
-    article_date: datetime
-    journal_date_element = element.find(
-        "MedlineCitation/Article/Journal/JournalIssue/PubDate"
-    )
-    medline_date: Element
-    if journal_date_element is not None:
-        medline_date = journal_date_element.find("MedlineDate")
-        if medline_date is not None:
-            year, month, day = parse_medline_date(medline_date.text)
-        else:
-            year = journal_date_element.find("Year")
-            month = journal_date_element.find("Month") or journal_date_element.find("Season")
-            day = journal_date_element.find("Day")
-
-            year = int(year.text) if year is not None else DEFAULT_YEAR
-            month = _month_str_to_month(month.text) if month is not None else DEFAULT_MONTH
-            day = int(day.text) if day is not None else DEFAULT_DAY
-
-        # Okay, *finally* we have integer representations.
-        # First, the month could be less than 1. (!?)
-        if month < 1:
-            month = DEFAULT_MONTH
-
-        # If the "month" is >12, likely the day and month need switching.
-        if month > 12:
-            month, day = day, month
-
-        # If for some reason, the day exceeds the number of days
-        # in a specific month, then just reset the day to the first.
-        ndays = calendar.mdays[month] + (month == calendar.February and calendar.isleap(year))
-        if day > ndays:
-            day = DEFAULT_DAY
-
-        if year < 1700:
-            year = DEFAULT_YEAR
-
-        article_date = datetime(year=year, month=month, day=day)
-    else:
-        raise Exception("no journal date element found")
-    abstract_el = element.findall("MedlineCitation/Article/Abstract/AbstractText")
-    chemical_list_el = element.findall("MedlineCitation/ChemicalList/Chemical/NameOfSubstance")
-    suppl_mesh_list_el = element.findall("MedlineCitation/SupplMeshList/SupplMeshName")
-    return PubmedArticle(
-        id=pmid,
-        date=article_date,
-        # date_revised=field_data.YES if article_revised_element is not None else field_data.NO,
-        title="".join(element.find("MedlineCitation/Article/ArticleTitle").itertext()),
-        abstract=" ".join(["".join(x.itertext()) for x in abstract_el]) if abstract_el is not None else "",
-        publication_type=[
-            el.text
-            for el in element.findall(
-                "MedlineCitation/Article/PublicationTypeList/PublicationType"
-            )
-        ],
-        mesh_heading_list=[
-            el.text
-            for el in element.findall(
-                "MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName"
-            )
-        ],
-        mesh_major_heading_list=[
-            el.text
-            for el in element.findall(
-                "MedlineCitation/MeshHeadingList/MeshHeading/DescriptorName[@MajorTopicYN='Y']"
-            )
-        ],
-        mesh_qualifier_list=[
-            el.text
-            for el in element.findall(
-                "MedlineCitation/MeshHeadingList/MeshHeading/QualifierName"
-            )
-        ],
-        supplementary_concept_list=[
-                                       el.text
-                                       for el in chemical_list_el
-                                       if chemical_list_el is not None
-                                   ] + [
-                                       el.text
-                                       for el in suppl_mesh_list_el
-                                       if suppl_mesh_list_el is not None
-                                   ],
-        keyword_list=[
-            el.text for el in element.findall("MedlineCitation/KeywordList/Keyword")
-        ],
+    org_study_id = "" if element.find("id_info/org_study_id") is None else element.find("id_info/org_study_id").text
+    secondary_id = "" if element.find("id_info/secondary_id") is None else element.find("id_info/secondary_id").text
+    nct_id = element.find("id_info/nct_id").text
+    brief_title = element.find("brief_title").text
+    official_title = "" if element.find("official_title") is None else element.find("official_title").text
+    sponsors = [el.text for el in element.findall("sponsors/*/source")]
+    source = element.find("source").text
+    brief_summary = element.find("source").text
+    detailed_description = "".join([el.text for el in element.findall("brief_summary/textblock")])
+    detailed_description = "".join([el.text for el in element.findall("detailed_description/textblock")])
+    overall_status = element.find("overall_status").text
+    phase = "" if element.find("phase") is None else element.find("phase").text
+    study_type = element.find("study_type").text
+    has_expanded_access = "" if element.find("has_expanded_access") is None else element.find("has_expanded_access").text
+    pd = "" if element.find("primary_outcome/description") is None else element.find("primary_outcome/description").text
+    pt = "" if element.find("primary_outcome/time_frame") is None else element.find("primary_outcome/time_frame").text
+    pm = "" if element.find("primary_outcome/measure") is None else element.find("primary_outcome/measure").text
+    primary_outcome =  pd + pt + pm
+    def so(e, t):
+        return "" if e.find(t) is None else e.find(t).text
+    secondary_outcomes = "" if element.find("secondary_outcome") is None else [so(el,"measure") + so(el,"time_frame") + so(el,"description") for el in element.findall("secondary_outcome")]
+    condition = "" if element.find("condition") is None else element.find("condition").text
+    intervention = "" if element.find("intervention/intervention_type") is None else element.find("intervention/intervention_type").text + element.find("intervention/intervention_name").text
+    criteria = "".join([el.text for el in element.findall("criteria/textblock")])
+    gender = "" if element.find("criteria/gender") is None else element.find("criteria/gender").text
+    minimum_age = 0 if element.find("criteria/minimum_age") is None else parse_ctgov_duration(element.find("criteria/minimum_age").text)
+    maximum_age = 999 if element.find("criteria/maximum_age") is None else parse_ctgov_duration(element.find("criteria/maximum_age").text)
+    healthy_volunteers = "" if element.find("criteria/healthy_volunteers") is None else element.find("criteria/healthy_volunteers").text
+    location = [el.text for el in element.findall("location/facility/name")]
+    location_countries = [el.text for el in element.findall("location_countries/country")]
+    verification_date = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("verification_date") is None else parse_ctgov_date(element.find("verification_date").text)
+    study_first_submitted = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("study_first_submitted") is None else parse_ctgov_date(element.find("study_first_submitted").text)
+    study_first_submitted_qc = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("study_first_submitted_qc") is None else parse_ctgov_date(element.find("study_first_submitted_qc").text)
+    study_first_posted = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("study_first_posted") is None else parse_ctgov_date(element.find("study_first_posted").text)
+    last_update_submitted = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("last_update_submitted") is None else parse_ctgov_date(element.find("last_update_submitted").text)
+    last_update_submitted_qc = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("last_update_submitted_qc") is None else parse_ctgov_date(element.find("last_update_submitted_qc").text)
+    last_update_posted = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("last_update_posted") is None else parse_ctgov_date(element.find("last_update_posted").text)
+    keyword = "" if element.find("keyword") is None else element.find("keyword").text
+    intervention_browse = [] if element.find("intervention_browse") is not None else [el.text for el in element.findall("intervention_browse/mesh_term")]
+    condition_browse =  [] if element.find("condition_browse") is not None else [el.text for el in element.findall("condition_browse/mesh_term")]
+    
+    return ClinicalTrialsGovArticle(
+        org_study_id=org_study_id,
+        secondary_id=secondary_id,
+        nct_id=nct_id,
+        brief_title=brief_title,
+        official_title=official_title,
+        sponsors=sponsors,
+        source=source,
+        brief_summary=brief_summary,
+        detailed_description=detailed_description,
+        overall_status=overall_status,
+        phase=phase,
+        study_type=study_type,
+        has_expanded_access=has_expanded_access,
+        primary_outcome=primary_outcome,
+        secondary_outcomes=secondary_outcomes,
+        condition=condition,
+        intervention=intervention,
+        criteria=criteria,
+        gender=gender,
+        minimum_age=minimum_age,
+        maximum_age=maximum_age,
+        healthy_volunteers=healthy_volunteers,
+        location=location,
+        location_countries=location_countries,
+        verification_date=verification_date,
+        study_first_submitted=study_first_submitted,
+        study_first_submitted_qc=study_first_submitted_qc,
+        study_first_posted=study_first_posted,
+        last_update_submitted=last_update_submitted,
+        last_update_submitted_qc=last_update_submitted_qc,
+        last_update_posted=last_update_posted,
+        keyword=keyword,
+        intervention_browse=intervention_browse,
+        condition_browse=condition_browse,
     )
 
 
@@ -247,91 +298,73 @@ class ClinicalTrialsGovIndexer(Indexer, SearcherMixin):
         """
         Read a single file, yielding documents. Supports both XML and GZipped XML files. This is how PubMed documents are stored on the baseline FTP server.
         """
-        if str(fname).endswith(".gz"):
-            with gzip.open(fname, "rb") as f:
-                root = et.fromstring(f.read())
-        elif str(fname).endswith(".xml"):
+        if str(fname).endswith(".xml"):
             tree = et.parse(fname)
             root = tree.getroot()
         else:
             raise Exception("file type not supported by parser")
-        for pubmed_article in root.iter("PubmedArticle"):
-            yield parse_pubmed_article_node(pubmed_article)
+        
+        for pubmed_article in root.iter("clinical_study"):
+            yield parse_ctgov_article(pubmed_article)
 
     @staticmethod
     def read_folder(folder: Path) -> Iterable[Document]:
         """
-        Read a folder of XML files. This method should be used when the PubMed documents are stored in a folder.
+        Read a folder of XML files. This method should be used when the CTGOV documents are stored in a folder.
         """
-        valid_files = [f for f in os.listdir(str(folder)) if not f.startswith(".")]
+        valid_files = glob.glob(str(folder / "*/*.xml"))
         for file in tqdm(valid_files, desc="folder progress", total=len(valid_files), position=0):
-            print(file)
-            for article in PubmedIndexer.read_file(folder / file):
+            for article in ClinicalTrialsGovIndexer.read_file(file):
                 yield article
 
-    @staticmethod
-    def read_jsonl(file: Path) -> Iterable[Document]:
-        """
-        Read a JSONL file. This method should be used when the PubMed documents are stored in a JSONL file.
-        The pybool_ir command line tool can be used to convert PubMed XML files to JSONL files.
-        Conversion of the files makes indexing considerably faster since the XML files do not need to be parsed.
-        """
-        with open(file, "r") as f:
-            for line in f:
-                yield PubmedArticle.from_json(line)
-
-    def parse_documents(self, baseline_path: Path) -> (Iterable[Document], int):
+    def parse_documents(self, baseline_path: Path) -> Tuple[Iterable[Document], int]:
         total = None
-        if baseline_path.is_dir():
-            articles = self.read_folder(baseline_path)
-        else:
-            with open(baseline_path) as f:
-                total = sum(1 for _ in f)
-            articles = PubmedIndexer.read_jsonl(baseline_path)
+        articles = self.read_folder(baseline_path)
         return articles, total
 
     def process_document(self, doc: Document) -> Document:
-        if doc.abstract is None:
-            doc.abstract = ""
-
-        if doc.title is None:
-            doc.title = ""
-
-        # Filter nulls.
-        doc.keyword_list = list(filter(None, doc.keyword_list))
-        doc.mesh_heading_list = list(filter(None, doc.mesh_heading_list))
-        doc.mesh_major_heading_list = list(filter(None, doc.mesh_major_heading_list))
-        doc.mesh_qualifier_list = list(filter(None, doc.mesh_qualifier_list))
-        doc.supplementary_concept_list = list(filter(None, doc.supplementary_concept_list))
-        doc.publication_type = list(filter(None, doc.publication_type))
-
-        # Ensure there are lists and not nulls.
-        if doc.keyword_list is None or not all(doc.keyword_list):
-            doc.keyword_list = []
-        if doc.mesh_heading_list is None or not all(doc.mesh_heading_list):
-            doc.mesh_heading_list = []
-        if doc.mesh_major_heading_list is None or not all(doc.mesh_major_heading_list):
-            doc.mesh_major_heading_list = []
-        if doc.mesh_qualifier_list is None or not all(doc.mesh_qualifier_list):
-            doc.mesh_qualifier_list = []
-        if doc.supplementary_concept_list is None or not all(doc.supplementary_concept_list):
-            doc.supplementary_concept_list = []
-        if doc.publication_type is None or not all(doc.publication_type):
-            doc.publication_type = []
-
         return doc
 
     def set_index_fields(self, store_fields: bool = False, optional_fields: List[str] = None):
-        self.index.set("id", engine.Field.String, stored=True, docValuesType="sorted")  # PMID
-        self.index.set("date", engine.DateTimeField, stored=store_fields)  # Date that the PMID was actually published.
-        self.index.set("title", engine.Field.Text, stored=store_fields)
-        self.index.set("abstract", engine.Field.Text, stored=store_fields)
-        self.index.set("keyword_list", engine.Field.Text, stored=store_fields)
-        self.index.set("publication_type", engine.Field.String, stored=store_fields)
-        self.index.set("mesh_heading_list", engine.Field.String, stored=store_fields)
-        self.index.set("mesh_qualifier_list", engine.Field.String, stored=store_fields)
-        self.index.set("mesh_major_heading_list", engine.Field.String, stored=store_fields)
-        self.index.set("supplementary_concept_list", engine.Field.String, stored=store_fields)
+        self.index.set("id", engine.Field.String, stored=True, docValuesType="sorted")  
+        self.index.set("nct_id", engine.Field.String, stored=True, docValuesType="sorted")  
+        self.index.set("org_study_id", engine.Field.String, stored=True, docValuesType="sorted")  
+        self.index.set("secondary_id", engine.Field.String, stored=True, docValuesType="sorted")  
+        
+        self.index.set("verification_date", engine.DateTimeField, stored=store_fields)
+        self.index.set("study_first_submitted", engine.DateTimeField, stored=store_fields)
+        self.index.set("study_first_submitted_qc", engine.DateTimeField, stored=store_fields)
+        self.index.set("study_first_posted", engine.DateTimeField, stored=store_fields)
+        self.index.set("last_update_submitted", engine.DateTimeField, stored=store_fields)
+        self.index.set("last_update_submitted_qc", engine.DateTimeField, stored=store_fields)
+        self.index.set("last_update_posted", engine.DateTimeField, stored=store_fields)
+        
+        self.index.set("brief_title", engine.Field.Text, stored=store_fields)
+        self.index.set("official_title", engine.Field.Text, stored=store_fields)
+        self.index.set("brief_summary", engine.Field.Text, stored=store_fields)
+        self.index.set("source", engine.Field.Text, stored=store_fields)
+        self.index.set("detailed_description", engine.Field.Text, stored=store_fields)
+        self.index.set("overall_status", engine.Field.Text, stored=store_fields)
+        self.index.set("phase", engine.Field.Text, stored=store_fields)
+        self.index.set("study_type", engine.Field.Text, stored=store_fields)
+        self.index.set("has_expanded_access", engine.Field.Text, stored=store_fields)
+        self.index.set("primary_outcome", engine.Field.Text, stored=store_fields)
+        self.index.set("condition", engine.Field.Text, stored=store_fields)
+        self.index.set("intervention", engine.Field.Text, stored=store_fields)
+        self.index.set("criteria", engine.Field.Text, stored=store_fields)
+        self.index.set("gender", engine.Field.Text, stored=store_fields)
+        self.index.set("healthy_volunteers", engine.Field.Text, stored=store_fields)
+        self.index.set("location", engine.Field.Text, stored=store_fields)
+
+        self.index.set("minimum_age", engine.Field, stored=store_fields)
+        self.index.set("maximum_age", engine.Field, stored=store_fields)
+
+        self.index.set("sponsors", engine.Field.String, stored=store_fields)
+        self.index.set("secondary_outcomes", engine.Field.String, stored=store_fields)
+        self.index.set("location_countries", engine.Field.String, stored=store_fields)
+        self.index.set("keyword", engine.Field.String, stored=store_fields)
+        self.index.set("intervention_browse", engine.Field.String, stored=store_fields)
+        self.index.set("condition_browse", engine.Field.String, stored=store_fields)
 
     def search(self, query: str, n_hits=10) -> List[Document]:
         hits = self.index.search(query, scores=False, mincount=n_hits)
@@ -339,41 +372,12 @@ class ClinicalTrialsGovIndexer(Indexer, SearcherMixin):
             n_hits = len(hits)
         for hit in hits[:n_hits]:
             if self.store_fields:
-                article: PubmedArticle = PubmedArticle.from_dict(hit.dict("mesh_heading_list",
-                                                                          "mesh_qualifier_list",
-                                                                          "mesh_major_heading_list",
-                                                                          "supplementary_concept_list",
-                                                                          "keyword_list",
-                                                                          "publication_type"))
-                yield article
-            else:
-                yield PubmedArticle.from_dict(hit.dict())
+                yield ClinicalTrialsGovArticle.from_dict(hit.dict())
 
     def search_fmt(self, query: str, n_hits=10, hit_formatter: str = None):
-        if hit_formatter is None and self.store_fields:
-            hit_formatter = "--------------------\nPMID * {id} * https://pubmed.ncbi.nlm.nih.gov/{id}\nTITL * {title}\npublished: {date}\nMAJR * {mesh_major_heading_list}\nMESH * {mesh_heading_list}\nQUAL * {mesh_qualifier_list}\nSUPP * {supplementary_concept_list}\nKWRD * {keyword_list}\nPUBT * {publication_type}\n"
-        elif hit_formatter is None:
-            hit_formatter = "{id} * https://pubmed.ncbi.nlm.nih.gov/{id}"
         hits = self.index.search(query, scores=False, mincount=n_hits)
         print(f"hits: {len(hits)}")
         for hit in hits[:n_hits]:
-            if self.store_fields:
-                article: PubmedArticle = PubmedArticle.from_dict(hit.dict("mesh_heading_list",
-                                                                          "mesh_qualifier_list",
-                                                                          "mesh_major_heading_list",
-                                                                          "supplementary_concept_list",
-                                                                          "keyword_list",
-                                                                          "publication_type"))
-                print(hit_formatter.format(id=article.id,
-                                           title=article.title,
-                                           date=article.date,
-                                           mesh_heading_list=article.mesh_heading_list,
-                                           mesh_qualifier_list=article.mesh_qualifier_list,
-                                           supplementary_concept_list=article.supplementary_concept_list,
-                                           keyword_list=article.keyword_list,
-                                           publication_type=article.publication_type,
-                                           mesh_major_heading_list=article.mesh_major_heading_list))
-            else:
-                article = PubmedArticle.from_dict(hit.dict())
-                print(hit_formatter.format(id=article.id))
+            article = ClinicalTrialsGovArticle.from_dict(hit.dict())
+            print(article.id)
         print("====================")

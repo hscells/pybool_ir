@@ -41,7 +41,10 @@ class Document(object):
 
     def to_dict(self):
         out = object.__getattribute__(self, "fields")
-        if "date" in self.keys():
+        for k, v in out.items():
+            if isinstance(v, datetime):
+                out[k] = v.timestamp()
+        if "date" in self.keys(): # Special case, should be removed in future.
             out["date"] = out["date"].timestamp()
         return out
 
