@@ -9,6 +9,7 @@ import click
 from tqdm.auto import tqdm
 
 import pybool_ir
+from pybool_ir.experiments.retrieval import AdHocExperiment
 from pybool_ir.index.generic import GenericSearcher
 from pybool_ir.query import GenericQueryParser
 
@@ -25,6 +26,14 @@ def cli():
 @cli.group()
 def pubmed():
     """Pubmed related commands."""
+
+@cli.group()
+def pmc():
+    """PMC related commands."""
+
+@cli.group()
+def ctgov():
+    """ClinicalTrials.gov related commands."""
 
 
 @cli.group()
@@ -66,13 +75,6 @@ def experiment():
     default=0,
     help="number of documents, that should be downloaded"
 )
-
-# TODO check for deletion
-# def pubmed_download(baseline_path: Path):
-#     from pybool_ir.datasets.pubmed.baseline import download_baseline
-#     download_baseline(Path(baseline_path))
-
-# TODO check for correct function
 def pubmed_download(baseline_path: Path, limit: int):
     from pybool_ir.datasets.pubmed.baseline import download_baseline
 
@@ -83,6 +85,49 @@ def pubmed_download(baseline_path: Path, limit: int):
         print(f"Download full baseline to {baseline_path}...")
         download_baseline(Path(baseline_path))
 
+
+@pmc.command("download")
+@click.option(
+    "-b",
+    "--baseline",
+    "baseline_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to download PMC OA baseline"
+)
+
+@click.option(
+    "-l",
+    "--limit",
+    "limit",
+    type=int,
+    default=0,
+    help="number of documents, that should be downloaded"
+)
+def pmc_download(baseline_path: Path, limit: int):
+    from pybool_ir.datasets.pmc.baseline import download_baseline
+
+    if limit > 0: 
+        print(f"Start download of {limit} documents to {baseline_path}...")
+        download_baseline(Path(baseline_path), limit)
+    else: 
+        print(f"Download full baseline to {baseline_path}...")
+        download_baseline(Path(baseline_path))
+
+@ctgov.command("download")
+@click.option(
+    "-b",
+    "--baseline",
+    "baseline_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="location to download all ClinicalTrials.gov data"
+)
+def ctgov_download(baseline_path: Path):
+    from pybool_ir.datasets.ctgov.baseline import download_baseline
+    download_baseline(Path(baseline_path))
 
 @pubmed.command("process")
 @click.option(
@@ -283,6 +328,11 @@ def pubmed_search(index_path: Path, store_fields: bool):
                 parser._parse(text)
             except Exception as e:
                 raise ValidationError(message=str(e), cursor_position=-1)
+
+    with AdHocExperiment(PubmedIndexer(Path(index_path), store_fields=store_fields), raw_query="test",page_start=0,page_size=10) as ex:
+        results = ex.run
+        total_count = len(results)
+        print(results)
 
     with PubmedIndexer(Path(index_path), store_fields=store_fields) as ix:
         print(f"pybool_ir {pybool_ir.__version__}")

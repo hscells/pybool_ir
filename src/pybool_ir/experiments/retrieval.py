@@ -23,6 +23,7 @@ from pybool_ir.query.ast import AtomNode
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.pubmed.parser import PubmedQueryParser, Q
 
+MAX_CLAUSES = 64_000
 
 class LuceneSearcher(ABC):
     """
@@ -41,6 +42,7 @@ class LuceneSearcher(ABC):
     def __enter__(self):
         self.indexer.__enter__()
         self.index = self.indexer.index
+        self.index.setMaxClauseCount(MAX_CLAUSES)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

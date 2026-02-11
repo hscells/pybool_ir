@@ -12,7 +12,7 @@ scratch
 test_data
 .eggs
 dist
-baseline
+baseline*
 data
 
 __pycache__

@@ -22,7 +22,6 @@ from pyparsing import (
     Suppress, infix_notation, OpAssoc, Group, Literal, Combine, OneOrMore, nums, White, PrecededBy)
 
 from pybool_ir.datasets.pubmed.mesh import MeSHTree
-from pybool_ir.query.parser import MAX_CLAUSES
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.ast import OperatorNode, AtomNode, ASTNode
 from pybool_ir.query.pubmed import fields
@@ -30,8 +29,6 @@ from pybool_ir.query.units import UnitAtom, QueryAtom
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
-# TODO https://lucene.apache.org/core/10_0_0/MIGRATE.html
-#search.BooleanQuery.setMaxClauseCount(MAX_CLAUSES)  # There is apparently a cap for efficiency reasons.
 analyzer = engine.analyzers.Analyzer.standard()
 
 

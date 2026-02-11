@@ -9,9 +9,6 @@ from lupyne import engine
 
 from pybool_ir.query.ast import ASTNode
 
-# TODO https://lucene.apache.org/core/10_0_0/MIGRATE.html
-MAX_CLAUSES = 60_000
-
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
 

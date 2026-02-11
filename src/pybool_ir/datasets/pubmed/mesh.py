@@ -30,6 +30,8 @@ class MeSHTree:
             download_mesh()
         with open(mtrees_file / f"mtrees{year}.bin", "r") as f:
             for i, line in enumerate(f):  # Assumes all headings are sorted in order of location.
+                if len(line.strip()) == 0:
+                    continue
                 heading, location = line.replace("\n", "").strip().split(";")
                 # TODO: Need to index mesh headings in the same way.
                 analyzed_heading = analyze_mesh(heading)

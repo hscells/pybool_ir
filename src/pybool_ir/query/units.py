@@ -9,12 +9,8 @@ from lupyne import engine
 # noinspection PyUnresolvedReferences
 from org.apache.lucene import search
 
-from pybool_ir.query.parser import MAX_CLAUSES
-
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
-# TODO https://lucene.apache.org/core/10_0_0/MIGRATE.html
-#search.BooleanQuery.setMaxClauseCount(MAX_CLAUSES)  # There is apparently a cap for efficiency reasons.
 analyzer = engine.analyzers.Analyzer.standard()
 
 

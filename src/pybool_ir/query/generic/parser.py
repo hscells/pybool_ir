@@ -17,7 +17,6 @@ from pyparsing import (
     Forward,
     ParserElement, Literal, Combine, PrecededBy, Group, Suppress, Optional, infix_notation, OpAssoc, CaselessKeyword, Keyword, OneOrMore, White)
 
-from pybool_ir.query.parser import MAX_CLAUSES
 from pybool_ir.query.ast import AtomNode, ASTNode, OperatorNode
 from pybool_ir.query.parser import QueryParser
 from pybool_ir.query.units import QueryAtom
@@ -28,8 +27,6 @@ DEFAULT_FIELD = "contents"
 
 assert lucene.getVMEnv() or lucene.initVM()
 Q = engine.Query
-# TODO https://lucene.apache.org/core/10_0_0/MIGRATE.html
-# search.BooleanQuery.setMaxClauseCount(MAX_CLAUSES)  # There is apparently a cap for efficiency reasons.
 
 # Makes parsing faster. (?)
 ParserElement.enablePackrat()
