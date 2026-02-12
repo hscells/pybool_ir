@@ -392,7 +392,7 @@ def pubmed_search(index_path: Path, store_fields: bool):
     required=False,
     help="whether to display stored fields or not"
 )
-def pubmed_search(index_path: Path, store_fields: bool):
+def ctgov_search(index_path: Path, store_fields: bool):
     from pybool_ir.index.ctgov import ClinicalTrialsGovIndexer
     from pybool_ir.query.essie.parser import EssieQueryParser
     from prompt_toolkit import PromptSession
@@ -400,8 +400,6 @@ def pubmed_search(index_path: Path, store_fields: bool):
     from prompt_toolkit.validation import ValidationError
 
     parser = EssieQueryParser()
-
-    print(parser.parse_ast("test"))
 
     class QueryValidator(Validator):
         def validate(self, query):
