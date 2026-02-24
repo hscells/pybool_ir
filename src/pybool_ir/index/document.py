@@ -44,8 +44,6 @@ class Document(object):
         for k, v in out.items():
             if isinstance(v, datetime):
                 out[k] = v.timestamp()
-        if "date" in self.keys(): # Special case, should be removed in future.
-            out["date"] = out["date"].timestamp()
         return out
 
     def to_json(self):
