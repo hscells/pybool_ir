@@ -84,6 +84,34 @@ def pubmed_download(baseline_path: Path, limit: int):
         print(f"Download full baseline to {baseline_path}...")
         download_baseline(Path(baseline_path))
 
+@pubmed.command("update")
+@click.option(
+    "-u",
+    "--update-path",
+    "update_path",
+    type=click.Path(),
+    multiple=False,
+    required=True,
+    help="Location to download PubMed update files"
+)
+
+@click.option(
+    "-l",
+    "--limit",
+    "limit",
+    type=int,
+    default=0,
+    help="Number of update documents that should be downloaded"
+)
+
+def pubmed_update(update_path: Path, limit: int): 
+    from pybool_ir.datasets.pubmed.baseline import update_baseline
+
+    print(f"Start fetching PubMed updates to {update_path}...")
+
+    update_baseline(Path(update_path), limit=limit if limit > 0 else None)
+    print("Updates downloaded successfully!")
+
 
 @pmc.command("download")
 @click.option(
