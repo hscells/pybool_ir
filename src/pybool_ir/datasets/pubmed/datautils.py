@@ -8,6 +8,7 @@ from pybool_ir.util import ProgressFile
 
 FTP_URL = "ftp.ncbi.nlm.nih.gov"
 FTP_BASELINE_CWD = "/pubmed/baseline/"
+FTP_UPDATE_CWD = "/pubmed/updatefiles/"
 FTP_PMC_CWD = "/pubmed/baseline/"
 
 MESH_YEAR = "2025"
