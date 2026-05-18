@@ -145,7 +145,7 @@ class ClinicalTrialsGovArticle(Document):
                      "late_update_submitted_qc",
                      "last_update_posted",
                      "keyword",
-                     "intervention_browse"
+                     "intervention_browse",
                      "condition_browse")
         del d["__id__"]
         del d["__score__"]
