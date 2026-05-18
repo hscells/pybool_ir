@@ -142,7 +142,7 @@ class ClinicalTrialsGovArticle(Document):
                      "study_first_submitted_qc",
                      "study_first_posted",
                      "last_update_submitted",
-                     "late_update_submitted_qc",
+                     "last_update_submitted_qc",
                      "last_update_posted",
                      "keyword",
                      "intervention_browse",
