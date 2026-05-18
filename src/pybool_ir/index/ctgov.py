@@ -241,8 +241,8 @@ def parse_ctgov_article(element: Element) -> ClinicalTrialsGovArticle:
     last_update_submitted_qc = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("last_update_submitted_qc") is None else parse_ctgov_date(element.find("last_update_submitted_qc").text)
     last_update_posted = datetime(year=DEFAULT_YEAR,month=DEFAULT_MONTH,day=DEFAULT_DAY) if element.find("last_update_posted") is None else parse_ctgov_date(element.find("last_update_posted").text)
     keyword = "" if element.find("keyword") is None else element.find("keyword").text
-    intervention_browse = [] if element.find("intervention_browse") is not None else [el.text for el in element.findall("intervention_browse/mesh_term")]
-    condition_browse =  [] if element.find("condition_browse") is not None else [el.text for el in element.findall("condition_browse/mesh_term")]
+    intervention_browse = [] if element.find("intervention_browse") is None else [el.text for el in element.findall("intervention_browse/mesh_term")]
+    condition_browse =  [] if element.find("condition_browse") is None else [el.text for el in element.findall("condition_browse/mesh_term")]
     
     return ClinicalTrialsGovArticle(
         org_study_id=org_study_id,
