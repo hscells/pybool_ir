@@ -210,7 +210,8 @@ def parse_ctgov_article(element: Element) -> ClinicalTrialsGovArticle:
     official_title = "" if element.find("official_title") is None else element.find("official_title").text
     sponsors = [el.text for el in element.findall("sponsors/*/source")]
     source = element.find("source").text
-    brief_summary = element.find("source").text
+    brief_summary = "".join([el.text for el in element.findall("brief_summary/textblock")])
+    #brief_summary = element.find("source").text
     detailed_description = "".join([el.text for el in element.findall("brief_summary/textblock")])
     detailed_description = "".join([el.text for el in element.findall("detailed_description/textblock")])
     overall_status = element.find("overall_status").text
